@@ -27,5 +27,5 @@ export class User extends PrimaryUuidBaseEntity {
   deletedAt: Date | null;
 
   @OneToMany(() => Task, (task) => task.user)
-  task: Task[];
+  tasks: Task[];
 }

@@ -1,5 +1,5 @@
 import { PrimaryUuidBaseEntity } from '@core/db';
-import { User } from '@resources/users/entities/user.entity';
+import { User } from '@resources/user/entities/user.entity';
 import { Entity, Column, ManyToOne } from 'typeorm';
 
 @Entity('tasks')

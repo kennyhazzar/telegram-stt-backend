@@ -1,6 +1,6 @@
 import { Entity, Column, ManyToOne } from 'typeorm';
 import { PrimaryUuidBaseEntity } from '@core/db';
-import { User } from '@resources/users/entities/user.entity';
+import { User } from '@resources/user/entities/user.entity';
 
 @Entity('balance')
 export class Balance extends PrimaryUuidBaseEntity {
