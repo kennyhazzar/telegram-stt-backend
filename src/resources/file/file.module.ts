@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { UploadController } from './file.controller';
+import { FileController } from './file.controller';
 import { ConfigModule } from '@nestjs/config';
 import { HttpModule } from '@nestjs/axios';
 import { TaskService } from '@resources/tasks/task.service';
@@ -11,7 +11,7 @@ import { TaskService } from '@resources/tasks/task.service';
     }),
     HttpModule,
   ],
-  controllers: [UploadController],
+  controllers: [FileController],
   providers: [TaskService],
 })
-export class UploadModule {}
+export class FileModule {}

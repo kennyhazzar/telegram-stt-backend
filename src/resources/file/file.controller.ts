@@ -8,7 +8,7 @@ import { extname } from 'path';
 import { TaskService } from '@resources/tasks/task.service';
 
 @Controller('upload')
-export class UploadController {
+export class FileController {
   private s3: S3Client;
 
   constructor(
