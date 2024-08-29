@@ -14,6 +14,13 @@ export class BalanceService {
     private readonly userRepository: Repository<User>,
   ) {}
 
+  async getTransactionsByUserId(userId: string): Promise<Balance[]> {
+    return this.balanceRepository.find({
+      where: { user: { id: userId } },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   async updateUserBalance(userId: string, amount: number): Promise<Balance> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
 
