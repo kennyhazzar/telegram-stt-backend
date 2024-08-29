@@ -4,6 +4,11 @@ import { EnvConfig, ThrottlerConfig, TypeormConfig } from '@core/configs';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
+import { BalanceModule } from './balance/balance.module';
+import { DownloadModule } from './download/download.module';
+import { TaskModule } from './tasks/task.module';
+import { TranscriptionModule } from './transcription/transcription.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -11,6 +16,11 @@ import { AuthModule } from './auth/auth.module';
     TypeOrmModule.forRootAsync(TypeormConfig),
     ThrottlerModule.forRootAsync(ThrottlerConfig),
     AuthModule,
+    BalanceModule,
+    DownloadModule,
+    TaskModule,
+    TranscriptionModule,
+    UserModule
   ],
 })
 export class AppModule {}
