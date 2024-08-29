@@ -5,9 +5,13 @@ import { HttpModule } from '@nestjs/axios';
 import { TranscriptionProcessor } from './transcription.processor';
 import { Task } from '@resources/tasks/entities/task.entity';
 import { TaskScheduler } from './task.scheduler';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+        isGlobal: true,
+    }),
     BullModule.registerQueue({
       name: 'transcription',
     }),
