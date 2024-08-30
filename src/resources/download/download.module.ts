@@ -1,10 +1,14 @@
 import { Module } from '@nestjs/common';
 import { DownloadService } from './download.service';
 import { DownloadController } from './download.controller';
-import { S3Client } from '@aws-sdk/client-s3';
+import { MinioModuleConfig } from '@core/configs';
+import { MinioModule } from 'nestjs-minio-client';
 
 @Module({
-  providers: [DownloadService, S3Client],
+  imports: [
+    MinioModule.registerAsync(MinioModuleConfig),
+  ],
+  providers: [DownloadService],
   controllers: [DownloadController],
   exports: [DownloadService],
 })
