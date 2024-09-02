@@ -27,6 +27,10 @@ export class StorageConfigs {
   domain: string;
   user: string;
   password: string;
+  bucketName: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  region: string;
 }
 
 export class BotConfigs {
