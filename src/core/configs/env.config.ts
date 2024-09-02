@@ -1,6 +1,12 @@
 import { registerAs, ConfigModuleOptions } from '@nestjs/config';
 import * as Joi from 'joi';
-import { CommonConfigs, DatabaseConfigs, RedisConfigs, StorageConfigs, ThrottlerConfigs } from '../types';
+import {
+  CommonConfigs,
+  DatabaseConfigs,
+  RedisConfigs,
+  StorageConfigs,
+  ThrottlerConfigs,
+} from '../types';
 
 const common = registerAs<CommonConfigs>('common', () => ({
   port: +process.env.PORT,
@@ -31,7 +37,7 @@ const storage = registerAs<StorageConfigs>('storage', () => ({
   domain: process.env.MINIO_DOMAIN,
   user: process.env.MINIO_ROOT_USER,
   password: process.env.MINIO_ROOT_PASSWORD,
-}))
+}));
 
 export const EnvConfig: ConfigModuleOptions = {
   envFilePath: '.env',

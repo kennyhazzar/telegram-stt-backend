@@ -53,7 +53,9 @@ export class DownloadService {
 
       return this.uploadToS3(filePath, `${fileId}.file`);
     } catch (error) {
-      throw new BadRequestException('Failed to download file from Google Drive');
+      throw new BadRequestException(
+        'Failed to download file from Google Drive',
+      );
     }
   }
 
@@ -65,7 +67,9 @@ export class DownloadService {
       const downloadLink = linkResponse.data.href;
 
       if (!downloadLink) {
-        throw new BadRequestException('Failed to get download link from Yandex Disk');
+        throw new BadRequestException(
+          'Failed to get download link from Yandex Disk',
+        );
       }
 
       const filePath = path.join(__dirname, 'temp', `${Date.now()}.file`);

@@ -20,7 +20,7 @@ import { UserModule } from './user/user.module';
     DownloadModule,
     TaskModule,
     TranscriptionModule,
-    UserModule
+    UserModule,
   ],
 })
 export class AppModule {}

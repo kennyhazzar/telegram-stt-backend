@@ -7,13 +7,16 @@ export class TaskController {
   constructor(private readonly taskService: TaskService) {}
 
   @Post()
-  async createTask(@Body() createTaskDto: {
-    status: 'created' | 'processing' | 'done' | 'rejected' | 'error';
-    inputFileId: string;
-    outputFileId?: string;
-    duration?: number;
-    userId: string;
-  }) {
+  async createTask(
+    @Body()
+    createTaskDto: {
+      status: 'created' | 'processing' | 'done' | 'rejected' | 'error';
+      inputFileId: string;
+      outputFileId?: string;
+      duration?: number;
+      userId: string;
+    },
+  ) {
     return this.taskService.createTask(createTaskDto);
   }
 

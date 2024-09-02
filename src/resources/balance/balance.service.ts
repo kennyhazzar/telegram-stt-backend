@@ -9,7 +9,7 @@ export class BalanceService {
   constructor(
     @InjectRepository(Balance)
     private readonly balanceRepository: Repository<Balance>,
-    
+
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
   ) {}

@@ -22,7 +22,9 @@ export class TaskService {
     duration?: number;
     userId: string; // Добавлен userId
   }): Promise<Task> {
-    const user = await this.userRepository.findOne({ where: { id: createTaskDto.userId } });
+    const user = await this.userRepository.findOne({
+      where: { id: createTaskDto.userId },
+    });
 
     if (!user) {
       throw new NotFoundException('User not found');
@@ -37,7 +39,10 @@ export class TaskService {
   }
 
   // Обновление задачи
-  async updateTask(taskId: string, updateTaskDto: Partial<Task>): Promise<Task> {
+  async updateTask(
+    taskId: string,
+    updateTaskDto: Partial<Task>,
+  ): Promise<Task> {
     const task = await this.taskRepository.preload({
       id: taskId,
       ...updateTaskDto,

@@ -17,14 +17,16 @@ export class TranscriptionProcessor {
     private readonly taskRepository: Repository<Task>,
     private readonly configService: ConfigService,
   ) {
-    this.transcriptionServiceUrl = this.configService.get<string>('TRANSCRIPTION_SERVICE_URL');
+    this.transcriptionServiceUrl = this.configService.get<string>(
+      'TRANSCRIPTION_SERVICE_URL',
+    );
   }
 
   @Process()
   async handleTranscription(job: Job): Promise<void> {
     try {
       const statusResponse = await lastValueFrom(
-        this.httpService.get(`${this.transcriptionServiceUrl}/status`)
+        this.httpService.get(`${this.transcriptionServiceUrl}/status`),
       );
 
       if (statusResponse.data.status !== 'idle') {
@@ -37,13 +39,13 @@ export class TranscriptionProcessor {
       });
 
       if (!task) {
-        return; 
+        return;
       }
 
       const transcriptionResponse = await lastValueFrom(
         this.httpService.post(`${this.transcriptionServiceUrl}/transcribe`, {
           fileId: task.inputFileId,
-        })
+        }),
       );
 
       task.status = 'processing';

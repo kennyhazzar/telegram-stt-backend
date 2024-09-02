@@ -19,7 +19,7 @@ export class UserService {
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.balance', 'balance')
       .where('user.id = :userId', { userId })
-      .addSelect(subQuery => {
+      .addSelect((subQuery) => {
         return subQuery
           .select('SUM(balance.amount)', 'totalAmount')
           .from(Balance, 'balance')
@@ -34,7 +34,7 @@ export class UserService {
     return user;
   }
 
-  async createUser(createUserDto: { 
+  async createUser(createUserDto: {
     telegramId: number;
     username: string;
     firstName: string;
@@ -45,7 +45,10 @@ export class UserService {
     return this.userRepository.save(newUser);
   }
 
-  async updateUser(userId: string, updateUserDto: Partial<User>): Promise<User> {
+  async updateUser(
+    userId: string,
+    updateUserDto: Partial<User>,
+  ): Promise<User> {
     const user = await this.userRepository.preload({
       id: userId,
       ...updateUserDto,
@@ -59,7 +62,7 @@ export class UserService {
   }
 
   async deleteUser(userId: string): Promise<void> {
-    const result = await this.userRepository.delete({id: userId});
+    const result = await this.userRepository.delete({ id: userId });
 
     if (result.affected === 0) {
       throw new NotFoundException('User not found');

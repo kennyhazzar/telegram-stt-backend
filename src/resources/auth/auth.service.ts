@@ -10,15 +10,21 @@ export class AuthService {
 
   validateTelegramData(telegramData: any): boolean {
     const { hash, ...dataToCheck } = telegramData;
-    
+
     const checkString = Object.keys(dataToCheck)
       .sort()
-      .map(key => `${key}=${dataToCheck[key]}`)
+      .map((key) => `${key}=${dataToCheck[key]}`)
       .join('\n');
 
-    const secretKey = crypto.createHash('sha256').update(this.botToken).digest();
+    const secretKey = crypto
+      .createHash('sha256')
+      .update(this.botToken)
+      .digest();
 
-    const signature = crypto.createHmac('sha256', secretKey).update(checkString).digest('hex');
+    const signature = crypto
+      .createHmac('sha256', secretKey)
+      .update(checkString)
+      .digest('hex');
 
     return signature === hash;
   }

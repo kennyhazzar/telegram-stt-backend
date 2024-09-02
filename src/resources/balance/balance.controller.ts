@@ -7,7 +7,9 @@ export class BalanceController {
   constructor(private readonly balanceService: BalanceService) {}
 
   @Get('user/:userId')
-  async getTransactionsByUserId(@Param('userId') userId: string): Promise<Balance[]> {
+  async getTransactionsByUserId(
+    @Param('userId') userId: string,
+  ): Promise<Balance[]> {
     return this.balanceService.getTransactionsByUserId(userId);
   }
 }
