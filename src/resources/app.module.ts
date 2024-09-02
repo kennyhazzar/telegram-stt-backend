@@ -9,7 +9,6 @@ import { DownloadModule } from './download/download.module';
 import { TaskModule } from './tasks/task.module';
 import { TranscriptionModule } from './transcription/transcription.module';
 import { UserModule } from './user/user.module';
-import { FileModule } from './file/file.module';
 
 @Module({
   imports: [
@@ -18,11 +17,10 @@ import { FileModule } from './file/file.module';
     ThrottlerModule.forRootAsync(ThrottlerConfig),
     AuthModule,
     BalanceModule,
-    // DownloadModule,
+    DownloadModule,
     TaskModule,
     TranscriptionModule,
-    UserModule,
-    FileModule,
+    UserModule
   ],
 })
 export class AppModule {}

@@ -28,13 +28,9 @@ const throttler = registerAs<ThrottlerConfigs>('throttler', () => ({
 }));
 
 const storage = registerAs<StorageConfigs>('storage', () => ({
-  domain: process.env.STORAGE_DOMAIN,
-  user: process.env.STORAGE_ROOT_USER,
-  password: process.env.STORAGE_ROOT_PASSWORD,
-  bucketName: process.env.STORAGE_S3_BUCKET_NAME,
-  accessKeyId: process.env.STORAGE_ACCESS_KEY_ID,
-  secretAccessKey: process.env.STORAGE_SECRET_ACCESS_KEY,
-  region: process.env.STORAGE_S3_REGION,
+  domain: process.env.MINIO_DOMAIN,
+  user: process.env.MINIO_ROOT_USER,
+  password: process.env.MINIO_ROOT_PASSWORD,
 }))
 
 export const EnvConfig: ConfigModuleOptions = {
@@ -48,13 +44,6 @@ export const EnvConfig: ConfigModuleOptions = {
     DB_USERNAME: Joi.string().required(),
     DB_PASSWORD: Joi.string().required(),
     DB_NAME: Joi.string().required(),
-    STORAGE_DOMAIN: Joi.string().required(),
-    STORAGE_ROOT_USER: Joi.string().required(),
-    STORAGE_ROOT_PASSWORD: Joi.string().required(),
-    STORAGE_S3_BUCKET_NAME: Joi.string().required(),
-    STORAGE_ACCESS_KEY_ID: Joi.string().required(),
-    STORAGE_SECRET_ACCESS_KEY: Joi.string().required(),
-    STORAGE_S3_REGION: Joi.string().required(),
   }),
   load: [common, database, redis, throttler, storage],
 };
