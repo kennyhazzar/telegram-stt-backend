@@ -1,6 +1,7 @@
 import { registerAs, ConfigModuleOptions } from '@nestjs/config';
 import * as Joi from 'joi';
 import {
+  BotConfigs,
   CommonConfigs,
   DatabaseConfigs,
   RedisConfigs,
@@ -39,6 +40,10 @@ const storage = registerAs<StorageConfigs>('storage', () => ({
   password: process.env.MINIO_ROOT_PASSWORD,
 }));
 
+const bot = registerAs<BotConfigs>('bot', () => ({
+  token: process.env.BOT_TOKEN,
+}));
+
 export const EnvConfig: ConfigModuleOptions = {
   envFilePath: '.env',
   isGlobal: true,
@@ -50,6 +55,7 @@ export const EnvConfig: ConfigModuleOptions = {
     DB_USERNAME: Joi.string().required(),
     DB_PASSWORD: Joi.string().required(),
     DB_NAME: Joi.string().required(),
+    BOT_TOKEN: Joi.string().required(),
   }),
-  load: [common, database, redis, throttler, storage],
+  load: [common, database, redis, throttler, storage, bot],
 };

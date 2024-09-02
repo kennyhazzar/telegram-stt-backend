@@ -27,7 +27,6 @@ export class UserController {
       username: string;
       firstName: string;
       secondName?: string;
-      md5: string;
     },
   ) {
     return this.userService.createUser(createUserDto);

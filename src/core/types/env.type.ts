@@ -28,3 +28,7 @@ export class StorageConfigs {
   user: string;
   password: string;
 }
+
+export class BotConfigs {
+  token: string;
+}

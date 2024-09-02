@@ -1,6 +1,7 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import {
+  DeepPartial,
   FindManyOptions,
   FindOneOptions,
   FindOptionsRelationByString,
@@ -19,6 +20,8 @@ export interface FindOneParams<T, U = T> {
   where?: FindOptionsWhere<T>[] | FindOptionsWhere<T>;
   transform?: (entity: T) => U;
   bypassCache?: boolean;
+  queryBuilder?: (qb: SelectQueryBuilder<T>) => SelectQueryBuilder<T>;
+  queryBuilderAlias?: string;
 }
 
 export interface FindManyParams<T, U = T> {
@@ -37,6 +40,20 @@ export interface FindManyParams<T, U = T> {
   queryBuilderAlias?: string;
 }
 
+export interface SaveEntity<T> {
+  payload: DeepPartial<T>;
+  repository: Repository<T>;
+  cacheValue?: (entity: T) => string;
+  bypassCache?: boolean;
+}
+
+export interface UpdateEntity<T> {
+  payload: DeepPartial<T>;
+  repository: Repository<T>;
+  cacheValue?: (entity: T) => string;
+  bypassCache?: boolean;
+}
+
 @Injectable()
 export class EntityService {
   constructor(@Inject('CACHE_MANAGER') private readonly cacheManager: Cache) {}
@@ -50,6 +67,8 @@ export class EntityService {
     where,
     transform,
     bypassCache = false,
+    queryBuilder,
+    queryBuilderAlias,
   }: FindOneParams<T, U>): Promise<U | undefined> {
     const cacheKey = cacheValue
       ? this.getCacheKey(repository.metadata.name, cacheValue)
@@ -62,13 +81,19 @@ export class EntityService {
     }
 
     if (!entity) {
-      const options: FindManyOptions<T> = {
-        where: { ...where },
-        relations,
-        select,
-      };
+      if (queryBuilder) {
+        let qb = repository.createQueryBuilder(queryBuilderAlias);
+        qb = queryBuilder(qb);
+        entity = await qb.getOne();
+      } else {
+        const options: FindManyOptions<T> = {
+          where: { ...where },
+          relations,
+          select,
+        };
 
-      entity = await repository.findOne(options);
+        entity = await repository.findOne(options);
+      }
 
       if (!entity) {
         return undefined;
@@ -146,7 +171,54 @@ export class EntityService {
       : (entities as unknown as U[]);
   }
 
+  async save<T>({
+    payload,
+    repository,
+    bypassCache = false,
+    cacheValue,
+  }: SaveEntity<T>): Promise<T> {
+    const newEntity = repository.create(payload);
+    const savedEntity = await repository.save(newEntity);
+
+    if (!bypassCache) {
+      const repositoryName = this.getRepositoryName(repository);
+      const cacheKey = this.getCacheKey(
+        repositoryName,
+        cacheValue(savedEntity),
+      );
+
+      await this.cacheManager.set(cacheKey, savedEntity, { ttl: 600 } as any);
+    }
+
+    return savedEntity;
+  }
+
+  async update<T>({
+    payload,
+    bypassCache = false,
+    repository,
+    cacheValue,
+  }: UpdateEntity<T>) {
+    const updatedEntity = await repository.save(payload);
+
+    if (!bypassCache) {
+      const repositoryName = this.getRepositoryName(repository);
+      const cacheKey = this.getCacheKey(
+        repositoryName,
+        cacheValue(updatedEntity),
+      );
+
+      await this.cacheManager.set(cacheKey, updatedEntity, { ttl: 600 } as any);
+    }
+
+    return updatedEntity;
+  }
+
   getCacheKey(key: string, cacheValue: string) {
     return `${key.toLowerCase()}_${cacheValue}`;
+  }
+
+  getRepositoryName<T>(repository: Repository<T>) {
+    return repository.metadata.name.toLowerCase();
   }
 }

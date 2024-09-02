@@ -1,12 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { BotConfigs } from '@core/types';
+import { UserService } from '../user/user.service';
 
 @Injectable()
 export class AuthService {
-  private readonly botToken = process.env.BOT_TOKEN;
-
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly usersService: UserService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+  ) {}
 
   validateTelegramData(telegramData: any): boolean {
     const { hash, ...dataToCheck } = telegramData;
@@ -29,10 +34,23 @@ export class AuthService {
     return signature === hash;
   }
 
-  async login(user: any) {
-    const payload = { username: user.username, sub: user.user_id };
-    return {
-      access_token: this.jwtService.sign(payload),
-    };
+  async loginBySecret(telegramData: any) {
+    if (this.validateTelegramData(telegramData)) {
+      const user = await this.usersService.getUserByTelegramId(telegramData.telegramId)
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      return {
+        access_token: this.jwtService.sign(user),
+      };
+    } else {
+      throw new NotFoundException('Invalid creds');
+    }
+  }
+
+  get botToken() {
+    return this.configService.get<BotConfigs>('bot').token;
   }
 }

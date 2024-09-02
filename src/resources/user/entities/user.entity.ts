@@ -17,7 +17,7 @@ export class User extends PrimaryUuidBaseEntity {
   @Column({ type: 'varchar', length: 255, nullable: true })
   secondName: string;
 
-  @Column({ type: 'varchar', length: 32, unique: true })
+  @Column({ type: 'varchar', length: 32, unique: true, nullable: true })
   md5: string;
 
   @OneToMany(() => Balance, (balance) => balance.user)

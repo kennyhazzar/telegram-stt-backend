@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { Balance } from '@resources/balance/entities/balance.entity';
+import { EntityService } from '@core/services';
 
 @Injectable()
 export class UserService {
@@ -10,22 +11,41 @@ export class UserService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
 
-    @InjectRepository(Balance)
-    private readonly balanceRepository: Repository<Balance>,
+    private readonly entityService: EntityService,
   ) {}
 
+  async getUserByTelegramId(telegramId: number) {
+    const user = await this.entityService.findOne({
+      repository: this.userRepository,
+      cacheValue: `telegram_${telegramId}`,
+      queryBuilderAlias: 'user',
+      queryBuilder: (qb) =>
+        qb.where('user.telegramId = :telegramId', { telegramId })
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
+
   async getUserWithBalance(userId: string): Promise<any> {
-    const user = await this.userRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.balance', 'balance')
-      .where('user.id = :userId', { userId })
-      .addSelect((subQuery) => {
-        return subQuery
-          .select('SUM(balance.amount)', 'totalAmount')
-          .from(Balance, 'balance')
-          .where('balance.userId = user.id');
-      }, 'totalAmount')
-      .getOne();
+    const user = await this.entityService.findOne({
+      repository: this.userRepository,
+      cacheValue: `with_balance_${userId}`,
+      queryBuilderAlias: 'user',
+      queryBuilder: (qb) =>
+        qb
+          .leftJoinAndSelect('user.balance', 'balance')
+          .where('user.id = :userId', { userId })
+          .addSelect((subQuery) => {
+            return subQuery
+              .select('SUM(balance.amount)', 'totalAmount')
+              .from(Balance, 'balance')
+              .where('balance.userId = user.id');
+          }, 'totalAmount'),
+    });
 
     if (!user) {
       throw new NotFoundException('User not found');
@@ -39,10 +59,12 @@ export class UserService {
     username: string;
     firstName: string;
     secondName?: string;
-    md5: string;
   }): Promise<User> {
-    const newUser = this.userRepository.create(createUserDto);
-    return this.userRepository.save(newUser);
+    return this.entityService.save<User>({
+      repository: this.userRepository,
+      payload: createUserDto,
+      cacheValue: (user) => user.id,
+    });
   }
 
   async updateUser(
@@ -58,7 +80,11 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
 
-    return this.userRepository.save(user);
+    return this.entityService.update({
+      payload: user,
+      repository: this.userRepository,
+      cacheValue: (user) => user.id,
+    });
   }
 
   async deleteUser(userId: string): Promise<void> {
