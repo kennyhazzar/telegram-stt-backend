@@ -133,5 +133,5 @@ export const FileMimeType = {
   'model/vrml': 'wrl',
   'application/wspolicy+xml': 'wspolicy',
   'application/x-compress': 'z',
-  'application/zip': 'zip'
+  'application/zip': 'zip',
 };

@@ -6,17 +6,23 @@ import {
   Delete,
   Param,
   Body,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { User } from './entities/user.entity';
+import { UserRequestContext } from '@core/types';
+import { AuthGuard } from '../auth/guards';
+import { Request } from 'express';
 
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Get(':userId')
-  async getUser(@Param('userId') userId: string) {
-    return this.userService.getUserWithBalance(userId);
+  @Get()
+  @UseGuards(AuthGuard)
+  async getUser(@Req() request: UserRequestContext) {
+    return this.userService.getUserWithBalance(request.user.id);
   }
 
   @Post()
@@ -32,17 +38,19 @@ export class UserController {
     return this.userService.createUser(createUserDto);
   }
 
-  @Patch(':userId')
+  @Patch()
+  @UseGuards(AuthGuard)
   async updateUser(
-    @Param('userId') userId: string,
+    @Req() request: UserRequestContext,
     @Body() updateUserDto: Partial<User>,
   ) {
-    return this.userService.updateUser(userId, updateUserDto);
+    return this.userService.updateUser(request.user.id, updateUserDto);
   }
 
-  @Delete(':userId')
-  async deleteUser(@Param('userId') userId: string) {
-    await this.userService.deleteUser(userId);
+  @Delete()
+  @UseGuards(AuthGuard)
+  async deleteUser(@Req() request: UserRequestContext) {
+    await this.userService.deleteUser(request.user.id);
     return { message: 'User deleted successfully' };
   }
 }

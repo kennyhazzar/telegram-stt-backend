@@ -22,7 +22,7 @@ import { FileModule } from './file/file.module';
     TaskModule,
     TranscriptionModule,
     UserModule,
-    FileModule
+    FileModule,
   ],
 })
 export class AppModule {}

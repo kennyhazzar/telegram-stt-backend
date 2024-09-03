@@ -13,7 +13,11 @@ import { randomUUID } from 'crypto';
 export class MinioStorage implements StorageEngine {
   constructor(private readonly minioService: MinioService) {}
 
-  _handleFile(req: Request, file: Express.Multer.File, cb: (error?: any, info?: Partial<Express.Multer.File>) => void): void {
+  _handleFile(
+    req: Request,
+    file: Express.Multer.File,
+    cb: (error?: any, info?: Partial<Express.Multer.File>) => void,
+  ): void {
     const bucket = 'test';
     const fileExtName = extname(file.originalname);
     const fileName = `${randomUUID()}${fileExtName.toLowerCase()}`;
@@ -28,19 +32,28 @@ export class MinioStorage implements StorageEngine {
       const fileBuffer = Buffer.concat(buffer);
 
       try {
-        const bucketExists = await this.minioService.client.bucketExists(bucket);
+        const bucketExists =
+          await this.minioService.client.bucketExists(bucket);
         if (!bucketExists) {
           await this.minioService.client.makeBucket(bucket, 'us-east-1');
         }
 
-        const duration = await getVideoDurationInSeconds(Readable.from(fileBuffer))
+        const duration = await getVideoDurationInSeconds(
+          Readable.from(fileBuffer),
+        );
 
         const metaData = {
           'Content-Type': file.mimetype,
-          duration,          
+          duration,
         };
 
-        await this.minioService.client.putObject(bucket, fileName, fileBuffer, Buffer.byteLength(fileBuffer), metaData);
+        await this.minioService.client.putObject(
+          bucket,
+          fileName,
+          fileBuffer,
+          Buffer.byteLength(fileBuffer),
+          metaData,
+        );
 
         cb(null, { filename: fileName, size: duration });
       } catch (error) {
@@ -51,7 +64,11 @@ export class MinioStorage implements StorageEngine {
     file.stream.on('error', (err) => cb(err));
   }
 
-  _removeFile(req: Request, file: Express.Multer.File, cb: (error: Error | null) => void): void {
+  _removeFile(
+    req: Request,
+    file: Express.Multer.File,
+    cb: (error: Error | null) => void,
+  ): void {
     cb(null);
   }
 }
@@ -59,7 +76,11 @@ export class MinioStorage implements StorageEngine {
 export const MinioModuleConfig = {
   imports: [ConfigModule],
   useFactory: (configService: ConfigService) => {
-    const { accessKeyId: accessKey, domain, secretAccessKey: secretKey } = configService.get<StorageConfigs>('storage');
+    const {
+      accessKeyId: accessKey,
+      domain,
+      secretAccessKey: secretKey,
+    } = configService.get<StorageConfigs>('storage');
 
     return {
       endPoint: domain,
@@ -67,7 +88,7 @@ export const MinioModuleConfig = {
       secretKey,
       useSSL: false,
       port: 9000,
-    }
+    };
   },
   inject: [ConfigService],
 };

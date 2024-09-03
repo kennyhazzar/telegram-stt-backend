@@ -1,4 +1,15 @@
-import { Controller, Post, UploadedFile, UseInterceptors, BadRequestException, Res, Param, Get, HttpStatus, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  UploadedFile,
+  UseInterceptors,
+  BadRequestException,
+  Res,
+  Param,
+  Get,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import { TaskService } from '@resources/tasks/task.service';
 import { MinioService } from 'nestjs-minio-client';
 import { Response } from 'express';
@@ -11,16 +22,20 @@ export class FileController {
   constructor(
     private readonly taskService: TaskService, // Инжектируем TaskService
     private readonly minioService: MinioService,
-  ) {
-  }
+  ) {}
 
   @Get('/file/:filename')
   async getFile(@Param('filename') filename: string, @Res() res: Response) {
-
     try {
-      const fileStream = await this.minioService.client.getObject(this.bucketName, filename);
+      const fileStream = await this.minioService.client.getObject(
+        this.bucketName,
+        filename,
+      );
 
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${filename}"`,
+      );
       fileStream.pipe(res);
     } catch (error) {
       return res.status(HttpStatus.NOT_FOUND).json({
@@ -36,16 +51,16 @@ export class FileController {
       if (!file) {
         throw new BadRequestException('File is required');
       }
-        
+
       const task = {
-          inputFileId: file.key,
-          status: 'created',
-          duration: file.size,
-          userId: 'test' // TODO add userId from request
-      } as any
-  
+        inputFileId: file.key,
+        status: 'created',
+        duration: file.size,
+        userId: 'test', // TODO add userId from request
+      } as any;
+
       // await this.taskService.createTask(task);
-  
+
       return {
         filename: file.filename,
         message: 'File uploaded successfully',

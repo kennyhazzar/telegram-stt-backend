@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -36,10 +36,23 @@ export class AuthService {
 
   async loginBySecret(telegramData: any) {
     if (this.validateTelegramData(telegramData)) {
-      const user = await this.usersService.getUserByTelegramId(telegramData.telegramId)
+      let user = await this.usersService.getUserByTelegramId(
+        telegramData.telegramId,
+      );
 
       if (!user) {
-        throw new NotFoundException('User not found');
+        try {
+          user = await this.usersService.createUser({
+            telegramId: telegramData.telegramId,
+            username: telegramData?.username,
+            firstName: telegramData?.firstName,
+            secondName: telegramData?.secondName,
+          });
+        } catch (error) {
+          console.log(error);
+
+          throw new BadRequestException({ message: 'error create user', error });
+        }
       }
 
       return {

@@ -20,7 +20,7 @@ export class UserService {
       cacheValue: `telegram_${telegramId}`,
       queryBuilderAlias: 'user',
       queryBuilder: (qb) =>
-        qb.where('user.telegramId = :telegramId', { telegramId })
+        qb.where('user.telegramId = :telegramId', { telegramId }),
     });
 
     if (!user) {
@@ -80,11 +80,18 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
 
-    return this.entityService.update({
+    const updateResult = await this.entityService.update({
       payload: user,
       repository: this.userRepository,
       cacheValue: (user) => user.id,
+      affectCache: async (cacheManager) => {
+        await Promise.allSettled([
+          cacheManager.del(`user_with_balance_${user.id}`),
+          cacheManager.del(`telegram_${user.telegramId}`),
+        ]);
+      }
     });
+    return updateResult;
   }
 
   async deleteUser(userId: string): Promise<void> {

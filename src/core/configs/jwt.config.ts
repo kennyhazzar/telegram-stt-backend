@@ -1,5 +1,5 @@
-import { ConfigModule, ConfigService } from "@nestjs/config";
-import { CommonConfigs } from "../types";
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { CommonConfigs } from '../types';
 
 export const JwtConfig = {
   imports: [ConfigModule],
@@ -7,5 +7,5 @@ export const JwtConfig = {
     secret: configService.get<CommonConfigs>('common').secret || 'secretKey',
     global: true,
   }),
-  inject: [ConfigService]
-}
+  inject: [ConfigService],
+};

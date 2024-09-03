@@ -17,64 +17,81 @@ export class DownloadService {
     private readonly configService: ConfigService,
   ) {}
 
-  async uploadToS3(file: Buffer, filename: string, mimetype: string) {
+  async uploadToS3(
+    file: Buffer,
+    filename: string,
+    mimetype: string,
+    size?: number,
+  ) {
     const { bucketName } = this.configService.get<StorageConfigs>('storage');
 
-    const duration = await getVideoDurationInSeconds(Readable.from(file))
+    const duration = await getVideoDurationInSeconds(Readable.from(file));
 
     const metaData = {
       'Content-Type': mimetype,
-      duration,    
+      duration,
     };
 
-    await this.minioService.client.putObject(bucketName, filename, file, Buffer.byteLength(file), metaData);
+    await this.minioService.client.putObject(
+      bucketName,
+      filename,
+      file,
+      Buffer.byteLength(file),
+      metaData,
+    );
     return {
       filename,
       duration,
       message: 'File uploaded successfully',
-    }
+    };
   }
 
   async downloadFromGoogleDrive(fileId: string) {
-    const { mimeType } = await this.validateGoogleDriveFile(fileId);
+    const { mimeType, buffer } = await this.validateGoogleDriveFile(fileId);
 
     try {
-      const fileUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-
-      const response = await axios({
-        url: fileUrl,
-        method: 'GET',
-        responseType: 'arraybuffer',
-      });
-
-      return this.uploadToS3(Buffer.from(response.data, 'binary'), `${randomUUID()}.${FileMimeType[mimeType]}`, mimeType);
+      return this.uploadToS3(
+        buffer,
+        `${randomUUID()}.${FileMimeType[mimeType]}`,
+        mimeType,
+      );
     } catch (error) {
-      throw new BadRequestException('Failed to download file from Google Drive');
+      console.log(error);
+      throw new BadRequestException(
+        'Failed to download file from Google Drive',
+      );
     }
   }
-
 
   async validateGoogleDriveFile(fileId: string) {
     try {
       const fileUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
 
-      const response = await axios.head(fileUrl);
+      const response = await this.fetchFileAsBuffer(fileUrl);
 
-      const size = parseInt(response.headers['content-length'], 10);
-      const mimeType = response.headers['content-type'];
-
-      console.log({ mimeType })
-
-      const validMimeTypes = ['video/mp4', 'audio/mpeg', 'audio/mp3', 'video/x-msvideo'];
-      if (!validMimeTypes.includes(mimeType)) {
-        throw new BadRequestException('Invalid file type. Only video or audio files are allowed.');
+      const validMimeTypes = [
+        'video/mp4',
+        'audio/mpeg',
+        'audio/mp3',
+        'video/x-msvideo',
+      ];
+      if (!validMimeTypes.includes(response?.mimeType)) {
+        throw new BadRequestException(
+          'Invalid file type. Only video or audio files are allowed.',
+        );
       }
 
-      if (size > this.MAX_FILE_SIZE) {
-        throw new BadRequestException('File is too large. Maximum size allowed is 1GB.');
+      if (response?.size > this.MAX_FILE_SIZE) {
+        throw new BadRequestException(
+          'File is too large. Maximum size allowed is 1GB.',
+        );
       }
 
-      return { mimeType, size };
+      return {
+        mimeType: response?.mimeType,
+        size: response?.size,
+        buffer: response.buffer,
+      };
     } catch (error) {
       console.log(error);
       throw new BadRequestException('Failed to validate Google Drive file');
@@ -101,8 +118,6 @@ export class DownloadService {
         responseType: 'arraybuffer',
       });
 
-      console.log(filePath);
-
       return 'string)';
 
       // const writer = fs.createWriteStream(filePath);
@@ -117,5 +132,31 @@ export class DownloadService {
     } catch (error) {
       throw new BadRequestException('Failed to download file from Yandex Disk');
     }
+  }
+
+  private async fetchFileAsBuffer(fileUrl: string) {
+    const response = await axios({
+      url: fileUrl,
+      method: 'GET',
+      responseType: 'stream',
+    });
+
+    const size = parseInt(response.headers['content-length'], 10);
+    const mimeType = response.headers['content-type'];
+
+    const chunks = [];
+
+    response.data.on('data', (chunk) => {
+      chunks.push(chunk);
+    });
+
+    await new Promise((resolve, reject) => {
+      response.data.on('end', resolve);
+      response.data.on('error', reject);
+    });
+
+    const buffer = Buffer.concat(chunks);
+
+    return { buffer, mimeType, size };
   }
 }

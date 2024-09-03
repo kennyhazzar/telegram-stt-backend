@@ -5,9 +5,7 @@ import { MinioModuleConfig } from '@core/configs';
 import { MinioModule } from 'nestjs-minio-client';
 
 @Module({
-  imports: [
-    MinioModule.registerAsync(MinioModuleConfig),
-  ],
+  imports: [MinioModule.registerAsync(MinioModuleConfig)],
   providers: [DownloadService],
   controllers: [DownloadController],
   exports: [DownloadService],

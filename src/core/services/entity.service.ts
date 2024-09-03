@@ -45,6 +45,7 @@ export interface SaveEntity<T> {
   repository: Repository<T>;
   cacheValue?: (entity: T) => string;
   bypassCache?: boolean;
+  affectCache?: (cacheManager: Cache) => Promise<void>;
 }
 
 export interface UpdateEntity<T> {
@@ -52,6 +53,7 @@ export interface UpdateEntity<T> {
   repository: Repository<T>;
   cacheValue?: (entity: T) => string;
   bypassCache?: boolean;
+  affectCache?: (cacheManager: Cache) => Promise<void>;
 }
 
 @Injectable()
@@ -176,6 +178,7 @@ export class EntityService {
     repository,
     bypassCache = false,
     cacheValue,
+    affectCache,
   }: SaveEntity<T>): Promise<T> {
     const newEntity = repository.create(payload);
     const savedEntity = await repository.save(newEntity);
@@ -190,6 +193,10 @@ export class EntityService {
       await this.cacheManager.set(cacheKey, savedEntity, { ttl: 600 } as any);
     }
 
+    if (!affectCache) {
+      await affectCache(this.cacheManager);
+    }
+
     return savedEntity;
   }
 
@@ -198,6 +205,7 @@ export class EntityService {
     bypassCache = false,
     repository,
     cacheValue,
+    affectCache,
   }: UpdateEntity<T>) {
     const updatedEntity = await repository.save(payload);
 
@@ -209,6 +217,10 @@ export class EntityService {
       );
 
       await this.cacheManager.set(cacheKey, updatedEntity, { ttl: 600 } as any);
+    }
+
+    if (affectCache) {
+      await affectCache(this.cacheManager);
     }
 
     return updatedEntity;
