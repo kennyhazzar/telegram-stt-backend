@@ -1,4 +1,4 @@
-import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, BadRequestException, Get, Query } from '@nestjs/common';
 import { DownloadService } from './download.service';
 
 @Controller('download')
@@ -21,12 +21,14 @@ export class DownloadController {
         throw new BadRequestException('Unsupported URL');
       }
     } catch (error) {
+      console.log(error);
       throw new BadRequestException('Failed to process the file');
     }
   }
 
   private extractGoogleDriveFileId(url: string): string {
     const match = url.match(/\/d\/(.*?)(\/|$)/);
+    console.log(match);
     if (!match || !match[1]) {
       throw new BadRequestException('Invalid Google Drive URL');
     }

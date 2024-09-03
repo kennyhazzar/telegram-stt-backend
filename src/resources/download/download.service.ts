@@ -1,61 +1,83 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import axios from 'axios';
-import * as fs from 'fs';
 import * as path from 'path';
 import { ConfigService } from '@nestjs/config';
+import { MinioService } from 'nestjs-minio-client';
+import { Readable } from 'stream';
+import getVideoDurationInSeconds from 'get-video-duration';
+import { randomUUID } from 'crypto';
+import { FileMimeType, StorageConfigs } from '@core/types';
 
 @Injectable()
 export class DownloadService {
+  private readonly MAX_FILE_SIZE = 1 * 1024 * 1024 * 1024; // 1 GB
+
   constructor(
-    private readonly s3Client: S3Client,
+    private readonly minioService: MinioService,
     private readonly configService: ConfigService,
   ) {}
 
-  async uploadToS3(filePath: string, fileName: string): Promise<string> {
-    const fileContent = fs.readFileSync(filePath);
-    const bucketName = this.configService.get<string>('AWS_BUCKET_NAME');
+  async uploadToS3(file: Buffer, filename: string, mimetype: string) {
+    const { bucketName } = this.configService.get<StorageConfigs>('storage');
 
-    const uploadParams = {
-      Bucket: bucketName,
-      Key: fileName,
-      Body: fileContent,
+    const duration = await getVideoDurationInSeconds(Readable.from(file))
+
+    const metaData = {
+      'Content-Type': mimetype,
+      duration,    
     };
 
-    try {
-      await this.s3Client.send(new PutObjectCommand(uploadParams));
-      return `https://${bucketName}.s3.amazonaws.com/${fileName}`; //TODO вот эта хуйня не нужна нам
-    } catch (error) {
-      throw new BadRequestException('Failed to upload file to S3');
-    } finally {
-      fs.unlinkSync(filePath); // Удаляем локальный файл после загрузки
+    await this.minioService.client.putObject(bucketName, filename, file, Buffer.byteLength(file), metaData);
+    return {
+      filename,
+      duration,
+      message: 'File uploaded successfully',
     }
   }
 
-  async downloadFromGoogleDrive(fileId: string): Promise<string> {
+  async downloadFromGoogleDrive(fileId: string) {
+    const { mimeType } = await this.validateGoogleDriveFile(fileId);
+
     try {
       const fileUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-      const filePath = path.join(__dirname, 'temp', `${fileId}.file`);
 
       const response = await axios({
         url: fileUrl,
         method: 'GET',
-        responseType: 'stream',
+        responseType: 'arraybuffer',
       });
 
-      const writer = fs.createWriteStream(filePath);
-      response.data.pipe(writer);
-
-      await new Promise((resolve, reject) => {
-        writer.on('finish', resolve);
-        writer.on('error', reject);
-      });
-
-      return this.uploadToS3(filePath, `${fileId}.file`);
+      return this.uploadToS3(Buffer.from(response.data, 'binary'), `${randomUUID()}.${FileMimeType[mimeType]}`, mimeType);
     } catch (error) {
-      throw new BadRequestException(
-        'Failed to download file from Google Drive',
-      );
+      throw new BadRequestException('Failed to download file from Google Drive');
+    }
+  }
+
+
+  async validateGoogleDriveFile(fileId: string) {
+    try {
+      const fileUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+
+      const response = await axios.head(fileUrl);
+
+      const size = parseInt(response.headers['content-length'], 10);
+      const mimeType = response.headers['content-type'];
+
+      console.log({ mimeType })
+
+      const validMimeTypes = ['video/mp4', 'audio/mpeg', 'audio/mp3', 'video/x-msvideo'];
+      if (!validMimeTypes.includes(mimeType)) {
+        throw new BadRequestException('Invalid file type. Only video or audio files are allowed.');
+      }
+
+      if (size > this.MAX_FILE_SIZE) {
+        throw new BadRequestException('File is too large. Maximum size allowed is 1GB.');
+      }
+
+      return { mimeType, size };
+    } catch (error) {
+      console.log(error);
+      throw new BadRequestException('Failed to validate Google Drive file');
     }
   }
 
@@ -76,18 +98,22 @@ export class DownloadService {
       const response = await axios({
         url: downloadLink,
         method: 'GET',
-        responseType: 'stream',
+        responseType: 'arraybuffer',
       });
 
-      const writer = fs.createWriteStream(filePath);
-      response.data.pipe(writer);
+      console.log(filePath);
 
-      await new Promise((resolve, reject) => {
-        writer.on('finish', resolve);
-        writer.on('error', reject);
-      });
+      return 'string)';
 
-      return this.uploadToS3(filePath, `${Date.now()}.file`);
+      // const writer = fs.createWriteStream(filePath);
+      // response.data.pipe(writer);
+
+      // await new Promise((resolve, reject) => {
+      //   writer.on('finish', resolve);
+      //   writer.on('error', reject);
+      // });
+
+      // return this.uploadToS3(filePath, `${Date.now()}.file`);
     } catch (error) {
       throw new BadRequestException('Failed to download file from Yandex Disk');
     }

@@ -5,7 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
 import { BalanceModule } from './balance/balance.module';
-// import { DownloadModule } from './download/download.module';
+import { DownloadModule } from './download/download.module';
 import { TaskModule } from './tasks/task.module';
 import { TranscriptionModule } from './transcription/transcription.module';
 import { UserModule } from './user/user.module';
@@ -18,7 +18,7 @@ import { FileModule } from './file/file.module';
     ThrottlerModule.forRootAsync(ThrottlerConfig),
     AuthModule,
     BalanceModule,
-    // DownloadModule,
+    DownloadModule,
     TaskModule,
     TranscriptionModule,
     UserModule,

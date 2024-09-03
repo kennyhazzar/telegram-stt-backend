@@ -1,11 +1,10 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { MinioService } from 'nestjs-minio-client';
 import { Request } from 'express';
 import { StorageEngine } from 'multer';
 import { extname } from 'path';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { StorageConfigs } from '../types';
-import * as ffmpeg from 'fluent-ffmpeg';
 import { Readable } from 'typeorm/platform/PlatformTools';
 import getVideoDurationInSeconds from 'get-video-duration';
 import { randomUUID } from 'crypto';
@@ -29,7 +28,6 @@ export class MinioStorage implements StorageEngine {
       const fileBuffer = Buffer.concat(buffer);
 
       try {
-        // Убедитесь, что бакет существует
         const bucketExists = await this.minioService.client.bucketExists(bucket);
         if (!bucketExists) {
           await this.minioService.client.makeBucket(bucket, 'us-east-1');
