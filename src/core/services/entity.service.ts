@@ -9,6 +9,7 @@ import {
   FindOptionsWhere,
   Repository,
   SelectQueryBuilder,
+  UpdateResult,
 } from 'typeorm';
 
 export interface FindOneParams<T, U = T> {
@@ -53,6 +54,12 @@ export interface UpdateEntity<T> {
   repository: Repository<T>;
   cacheValue?: (entity: T) => string;
   bypassCache?: boolean;
+  affectCache?: (cacheManager: Cache) => Promise<void>;
+}
+
+export interface DeleteEntity<T> {
+  id: string;
+  repository: Repository<T>;
   affectCache?: (cacheManager: Cache) => Promise<void>;
 }
 
@@ -193,7 +200,7 @@ export class EntityService {
       await this.cacheManager.set(cacheKey, savedEntity, { ttl: 600 } as any);
     }
 
-    if (!affectCache) {
+    if (affectCache) {
       await affectCache(this.cacheManager);
     }
 
@@ -224,6 +231,20 @@ export class EntityService {
     }
 
     return updatedEntity;
+  }
+
+  async softDeleteOne<T>({
+    id,
+    repository,
+    affectCache,
+  }: DeleteEntity<T>): Promise<UpdateResult> {
+    const deleteResult = await repository.softDelete({ id } as any);
+
+    if (affectCache) {
+      await affectCache(this.cacheManager);
+    }
+
+    return deleteResult;
   }
 
   getCacheKey(key: string, cacheValue: string) {

@@ -4,7 +4,6 @@ import {
   Post,
   Patch,
   Delete,
-  Param,
   Body,
   UseGuards,
   Req,
@@ -13,7 +12,6 @@ import { UserService } from './user.service';
 import { User } from './entities/user.entity';
 import { UserRequestContext } from '@core/types';
 import { AuthGuard } from '../auth/guards';
-import { Request } from 'express';
 
 @Controller('users')
 export class UserController {
@@ -50,7 +48,7 @@ export class UserController {
   @Delete()
   @UseGuards(AuthGuard)
   async deleteUser(@Req() request: UserRequestContext) {
-    await this.userService.deleteUser(request.user.id);
+    await this.userService.deleteUser(request.user);
     return { message: 'User deleted successfully' };
   }
 }

@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { Balance } from '@resources/balance/entities/balance.entity';
 import { EntityService } from '@core/services';
+import { UserJwtPayload } from '@core/types';
 
 @Injectable()
 export class UserService {
@@ -22,10 +23,6 @@ export class UserService {
       queryBuilder: (qb) =>
         qb.where('user.telegramId = :telegramId', { telegramId }),
     });
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
 
     return user;
   }
@@ -89,13 +86,22 @@ export class UserService {
           cacheManager.del(`user_with_balance_${user.id}`),
           cacheManager.del(`telegram_${user.telegramId}`),
         ]);
-      }
+      },
     });
     return updateResult;
   }
 
-  async deleteUser(userId: string): Promise<void> {
-    const result = await this.userRepository.delete({ id: userId });
+  async deleteUser(user: UserJwtPayload): Promise<void> {
+    const result = await this.entityService.softDeleteOne({
+      id: user.id,
+      repository: this.userRepository,
+      affectCache: async (cacheManager) => {
+        await Promise.allSettled([
+          cacheManager.del(`user_with_balance_${user.id}`),
+          cacheManager.del(`telegram_${user.telegramId}`),
+        ]);
+      },
+    });
 
     if (result.affected === 0) {
       throw new NotFoundException('User not found');

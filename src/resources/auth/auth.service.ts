@@ -1,9 +1,14 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { BotConfigs } from '@core/types';
+import { BotConfigs, CommonConfigs } from '@core/types';
 import { UserService } from '../user/user.service';
+import { TelegramDataDto } from './dto';
 
 @Injectable()
 export class AuthService {
@@ -34,7 +39,7 @@ export class AuthService {
     return signature === hash;
   }
 
-  async loginBySecret(telegramData: any) {
+  async loginBySecret(telegramData: TelegramDataDto) {
     if (this.validateTelegramData(telegramData)) {
       let user = await this.usersService.getUserByTelegramId(
         telegramData.telegramId,
@@ -51,12 +56,19 @@ export class AuthService {
         } catch (error) {
           console.log(error);
 
-          throw new BadRequestException({ message: 'error create user', error });
+          throw new BadRequestException({
+            message: 'error create user',
+          });
         }
       }
 
+      const payload = {
+        id: user.id,
+        telegramId: user.telegramId,
+      }
+
       return {
-        access_token: this.jwtService.sign(user),
+        access_token: this.jwtService.sign(payload),
       };
     } else {
       throw new NotFoundException('Invalid creds');

@@ -8,10 +8,10 @@ export class User extends PrimaryUuidBaseEntity {
   @Column({ type: 'bigint', unique: true })
   telegramId: number;
 
-  @Column({ type: 'varchar', length: 255, unique: true })
+  @Column({ type: 'varchar', length: 255, unique: true, nullable: true })
   username: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   firstName: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
