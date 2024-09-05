@@ -46,9 +46,9 @@ services:
      - "9000:9000"
      - "9001:9001"
    environment:
-     STORAGE_DOMAIN: ${STORAGE_DOMAIN}
-     STORAGE_ROOT_USER: ${STORAGE_ROOT_USER}
-     STORAGE_ROOT_PASSWORD: ${STORAGE_ROOT_PASSWORD}
+     MINIO_DOMAIN: ${STORAGE_DOMAIN}
+     MINIO_ROOT_USER: ${STORAGE_ROOT_USER}
+     MINIO_ROOT_PASSWORD: ${STORAGE_ROOT_PASSWORD}
    restart: always
    volumes:
      - ./storage:/data

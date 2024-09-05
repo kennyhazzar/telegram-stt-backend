@@ -18,7 +18,7 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  validateTelegramData(telegramData: any): boolean {
+  validateTelegramData(telegramData: TelegramDataDto): boolean {
     const { hash, ...dataToCheck } = telegramData;
 
     const checkString = Object.keys(dataToCheck)
