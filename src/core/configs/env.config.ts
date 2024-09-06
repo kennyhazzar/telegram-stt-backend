@@ -13,6 +13,7 @@ const common = registerAs<CommonConfigs>('common', () => ({
   port: +process.env.PORT,
   env: process.env.NODE_ENV,
   secret: process.env.JWT_SECRET,
+  pricePerMinute: +process.env.PRICE_PER_MINUTE,
 }));
 
 const database = registerAs<DatabaseConfigs>('db', () => ({
@@ -53,6 +54,7 @@ export const EnvConfig: ConfigModuleOptions = {
   isGlobal: true,
   validationSchema: Joi.object({
     PORT: Joi.string().required(),
+    PRICE_PER_MINUTE: Joi.number().optional(),
     DB_TYPE: Joi.string().required(),
     DB_HOST: Joi.string().required(),
     DB_PORT: Joi.number().required(),

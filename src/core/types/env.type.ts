@@ -2,6 +2,7 @@ export class CommonConfigs {
   port: number;
   env: string;
   secret: string;
+  pricePerMinute: number;
 }
 
 export class DatabaseConfigs {

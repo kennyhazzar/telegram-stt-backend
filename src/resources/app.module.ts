@@ -10,6 +10,7 @@ import { TaskModule } from './tasks/task.module';
 import { TranscriptionModule } from './transcription/transcription.module';
 import { UserModule } from './user/user.module';
 import { FileModule } from './file/file.module';
+import { TariffModule } from './tariff/tariff.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { FileModule } from './file/file.module';
     TranscriptionModule,
     UserModule,
     FileModule,
+    TariffModule,
   ],
 })
 export class AppModule {}
