@@ -44,7 +44,7 @@ export class AuthService {
   }
 
   async loginBySecret(telegramData: TelegramDataDto) {
-    if (this.validateTelegramData(telegramData) && this.env !== 'development') {
+    if (this.validateTelegramData(telegramData) || this.env !== 'development') {
       let user = await this.usersService.getUserByTelegramId(
         telegramData.telegramId,
       );
