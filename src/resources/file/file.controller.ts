@@ -14,21 +14,25 @@ import { TaskService } from '@resources/tasks/task.service';
 import { MinioService } from 'nestjs-minio-client';
 import { Response } from 'express';
 import { MinioFileInterceptor } from './file.interceptor';
+import { ConfigService } from '@nestjs/config';
+import { StorageConfigs } from '@core/types';
 
 @Controller('upload')
 export class FileController {
-  private bucketName = 'test';
   private logger = new Logger(FileController.name);
   constructor(
+    private readonly configService: ConfigService,
     private readonly taskService: TaskService, // Инжектируем TaskService
     private readonly minioService: MinioService,
   ) {}
 
   @Get('/file/:filename')
   async getFile(@Param('filename') filename: string, @Res() res: Response) {
+    const { bucketName } = this.configService.get<StorageConfigs>('storage');
+
     try {
       const fileStream = await this.minioService.client.getObject(
-        this.bucketName,
+        bucketName,
         filename,
       );
 

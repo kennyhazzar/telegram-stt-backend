@@ -1,9 +1,10 @@
 import { BadRequestException } from '@nestjs/common';
 import { MinioStorage } from './minio-storage.config';
 import { MinioService } from 'nestjs-minio-client';
+import { ConfigService } from '@nestjs/config';
 
-export const fileInterceptorConfig = (minioService: MinioService) => ({
-  storage: new MinioStorage(minioService),
+export const fileInterceptorConfig = (minioService: MinioService, configService: ConfigService) => ({
+  storage: new MinioStorage(minioService, configService),
   limits: { fileSize: 1024 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedMimeTypes = [
