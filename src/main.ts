@@ -9,7 +9,7 @@ import { TariffService } from './resources/tariff/tariff.service';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  const { port, pricePerMinute } = app.get(ConfigService).get<CommonConfigs>('common');
+  const { port } = app.get(ConfigService).get<CommonConfigs>('common');
 
   const logger = new Logger(AppModule.name);
 
@@ -17,12 +17,7 @@ async function bootstrap() {
   const tariffService = app.get(TariffService);
 
   const existingTariff = await tariffService.getTariff();
-  if (!existingTariff) {
-    await tariffService.updateTariff(pricePerMinute && 5);
-    logger.warn(`Tariff initialized successfully: ${pricePerMinute && 5}`);
-  } else {
-    logger.warn(`Tariff already exists: ${existingTariff.pricePerMinute}`);
-  }
+  logger.warn(`Tariff: ${existingTariff.pricePerMinute}`);
 
   app.useGlobalPipes(new ValidationPipe());
 
