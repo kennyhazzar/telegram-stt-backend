@@ -12,12 +12,17 @@ export class DownloadController {
     }
 
     try {
+      //TODO: всрато все это выглядит, надо позже переделать
       if (url.includes('drive.google.com')) {
         const fileId = this.extractGoogleDriveFileId(url);
         return await this.downloadService.downloadFromGoogleDrive(fileId);
       } else if (url.includes('yadi.sk') || url.includes('disk.yandex.ru')) {
         return await this.downloadService.downloadFromYandexDisk(url);
-      } else {
+      }  else if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        return await this.downloadService.downloadFromYoutubeAsAudio(url);
+      }
+
+      else {
         throw new BadRequestException('Unsupported URL');
       }
     } catch (error) {

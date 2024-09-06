@@ -7,6 +7,7 @@ import { Readable } from 'stream';
 import getVideoDurationInSeconds from 'get-video-duration';
 import { randomUUID } from 'crypto';
 import { FileMimeType, StorageConfigs } from '@core/types';
+import * as ytdl from 'ytdl-core';
 
 @Injectable()
 export class DownloadService {
@@ -158,5 +159,13 @@ export class DownloadService {
     const buffer = Buffer.concat(chunks);
 
     return { buffer, mimeType, size };
+  }
+
+  async downloadFromYoutubeAsAudio(url: string) {
+    const response = await ytdl.getInfo(url);
+
+    console.log({ response }); //! CAREFULLY THIS IS DEBUGGGG
+
+    return { response };
   }
 }
