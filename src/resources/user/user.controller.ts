@@ -11,14 +11,14 @@ import {
 import { UserService } from './user.service';
 import { User } from './entities/user.entity';
 import { UserRequestContext } from '@core/types';
-import { AuthGuard } from '../auth/guards';
+import { AuthGuard, ThrottlerBehindProxyGuard } from '../auth/guards';
 
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  @UseGuards(AuthGuard)
+  @UseGuards(ThrottlerBehindProxyGuard, AuthGuard)
   async getUser(@Req() request: UserRequestContext) {
     return this.userService.getUserWithBalance(request.user.id);
   }
@@ -37,7 +37,7 @@ export class UserController {
   }
 
   @Patch()
-  @UseGuards(AuthGuard)
+  @UseGuards(ThrottlerBehindProxyGuard, AuthGuard)
   async updateUser(
     @Req() request: UserRequestContext,
     @Body() updateUserDto: Partial<User>,
@@ -46,7 +46,7 @@ export class UserController {
   }
 
   @Delete()
-  @UseGuards(AuthGuard)
+  @UseGuards(ThrottlerBehindProxyGuard, AuthGuard)
   async deleteUser(@Req() request: UserRequestContext) {
     await this.userService.deleteUser(request.user);
     return { message: 'User deleted successfully' };
