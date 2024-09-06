@@ -12,11 +12,15 @@ import { TelegramDataDto } from './dto';
 
 @Injectable()
 export class AuthService {
+  private env: string;
+
   constructor(
     private readonly usersService: UserService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    this.env = this.nodeEnv;
+  }
 
   validateTelegramData(telegramData: TelegramDataDto): boolean {
     const { hash, ...dataToCheck } = telegramData;
@@ -40,7 +44,7 @@ export class AuthService {
   }
 
   async loginBySecret(telegramData: TelegramDataDto) {
-    if (this.validateTelegramData(telegramData)) {
+    if (this.validateTelegramData(telegramData) && this.env !== 'development') {
       let user = await this.usersService.getUserByTelegramId(
         telegramData.telegramId,
       );
@@ -77,5 +81,9 @@ export class AuthService {
 
   get botToken() {
     return this.configService.get<BotConfigs>('bot').token;
+  }
+
+  get nodeEnv() {
+    return this.configService.get<CommonConfigs>('common').env;
   }
 }
