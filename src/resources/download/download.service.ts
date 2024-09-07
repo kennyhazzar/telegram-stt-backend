@@ -1,9 +1,9 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import axios from 'axios';
 import * as path from 'path';
 import { ConfigService } from '@nestjs/config';
 import { MinioService } from 'nestjs-minio-client';
-import { Readable } from 'stream';
+import { PassThrough, Readable } from 'stream';
 import getVideoDurationInSeconds from 'get-video-duration';
 import { randomUUID } from 'crypto';
 import { FileMimeType, StorageConfigs } from '@core/types';
@@ -12,6 +12,7 @@ import * as ytdl from 'ytdl-core';
 @Injectable()
 export class DownloadService {
   private readonly MAX_FILE_SIZE = 1 * 1024 * 1024 * 1024; // 1 GB
+  private readonly logger = new Logger(DownloadService.name)
 
   constructor(
     private readonly minioService: MinioService,
@@ -57,7 +58,7 @@ export class DownloadService {
         mimeType,
       );
     } catch (error) {
-      console.log(error);
+      this.logger.error(error);
       throw new BadRequestException(
         'Failed to download file from Google Drive',
       );
@@ -94,7 +95,7 @@ export class DownloadService {
         buffer: response.buffer,
       };
     } catch (error) {
-      console.log(error);
+      this.logger.error(error);
       throw new BadRequestException('Failed to validate Google Drive file');
     }
   }
@@ -161,11 +162,37 @@ export class DownloadService {
     return { buffer, mimeType, size };
   }
 
-  async downloadFromYoutubeAsAudio(url: string) {
-    const response = await ytdl.getInfo(url);
+  async downloadFromYoutubeAsAudio(url: string): Promise<any> {
+    try {
+      // Получаем информацию о видео
+      const info = await ytdl.getInfo(url);
 
-    console.log({ response }); //! CAREFULLY THIS IS DEBUGGGG
+      const audioFormat = ytdl.chooseFormat(info.formats, { filter: 'audioonly' });
+      if (!audioFormat) {
+        throw new Error('No suitable audio format found');
+      }
 
-    return { response };
+      // Скачиваем аудио с использованием информации о видео
+      const audioStream = ytdl.downloadFromInfo(info, { format: audioFormat });
+      const passThrough = new PassThrough();
+      audioStream.pipe(passThrough);
+
+      const chunks: Buffer[] = [];
+      const buffer = await new Promise<Buffer>((resolve, reject) => {
+        passThrough.on('data', (chunk) => chunks.push(chunk));
+        passThrough.on('end', () => resolve(Buffer.concat(chunks)));
+        passThrough.on('error', (err) => reject(err));
+      });
+
+      // Генерируем имя файла
+      const filename = `${randomUUID()}.mp3`;
+
+      // Загружаем аудио в MinIO
+      return this.uploadToS3(buffer, filename, 'audio/mpeg');
+    } catch (error) {
+      this.logger.error(`Failed to download audio from YouTube: ${error.message}`);
+      throw new Error('Error downloading and uploading audio from YouTube');
+    }
   }
+
 }
