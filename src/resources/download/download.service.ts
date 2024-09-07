@@ -7,7 +7,7 @@ import { PassThrough, Readable } from 'stream';
 import getVideoDurationInSeconds from 'get-video-duration';
 import { randomUUID } from 'crypto';
 import { FileMimeType, StorageConfigs } from '@core/types';
-import * as ytdl from 'ytdl-core';
+import * as ytdl from '@distube/ytdl-core';
 
 @Injectable()
 export class DownloadService {
@@ -164,35 +164,32 @@ export class DownloadService {
 
   async downloadFromYoutubeAsAudio(url: string): Promise<any> {
     try {
-      // Получаем информацию о видео
       const info = await ytdl.getInfo(url);
 
-      const audioFormat = ytdl.chooseFormat(info.formats, { filter: 'audioonly' });
+      const audioFormat = ytdl.chooseFormat(info.formats, { filter: 'audioonly',  });
       if (!audioFormat) {
-        throw new Error('No suitable audio format found');
+        throw new BadRequestException('No suitable audio format found');
       }
 
-      // Скачиваем аудио с использованием информации о видео
-      const audioStream = ytdl.downloadFromInfo(info, { format: audioFormat });
-      const passThrough = new PassThrough();
-      audioStream.pipe(passThrough);
+      if (audioFormat?.url) {
+        const { buffer, mimeType } = await this.fetchFileAsBuffer(audioFormat.url);
 
-      const chunks: Buffer[] = [];
-      const buffer = await new Promise<Buffer>((resolve, reject) => {
-        passThrough.on('data', (chunk) => chunks.push(chunk));
-        passThrough.on('end', () => resolve(Buffer.concat(chunks)));
-        passThrough.on('error', (err) => reject(err));
-      });
-
-      // Генерируем имя файла
-      const filename = `${randomUUID()}.mp3`;
-
-      // Загружаем аудио в MinIO
-      return this.uploadToS3(buffer, filename, 'audio/mpeg');
+        const filename = `${randomUUID()}.mp3`;
+        return this.uploadToS3(buffer, filename, mimeType);
+      } else {
+        throw new BadRequestException('Error fetch file as buffer');
+      }
     } catch (error) {
       this.logger.error(`Failed to download audio from YouTube: ${error.message}`);
-      throw new Error('Error downloading and uploading audio from YouTube');
+      throw new BadRequestException('Error downloading and uploading audio from YouTube');
     }
   }
 
+  private async streamToBuffer(stream: Readable): Promise<Buffer> {
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(chunk);
+    }
+    return Buffer.concat(chunks);
+  }
 }
