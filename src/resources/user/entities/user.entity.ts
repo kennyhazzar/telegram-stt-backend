@@ -2,6 +2,7 @@ import { Entity, Column, DeleteDateColumn, OneToMany, Unique } from 'typeorm';
 import { PrimaryUuidBaseEntity } from '@core/db';
 import { Balance } from '@resources/balance/entities/balance.entity';
 import { Task } from '@resources/tasks/entities/task.entity';
+import { Download } from '../../download/entities';
 
 @Entity('users')
 export class User extends PrimaryUuidBaseEntity {
@@ -28,4 +29,10 @@ export class User extends PrimaryUuidBaseEntity {
 
   @OneToMany(() => Task, (task) => task.user)
   tasks: Task[];
+
+  @OneToMany(() => Download, (download) => download.user, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  download: Download[];
 }

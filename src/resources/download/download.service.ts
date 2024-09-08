@@ -1,203 +1,132 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
-import axios from 'axios';
-import * as path from 'path';
-import { ConfigService } from '@nestjs/config';
-import { MinioService } from 'nestjs-minio-client';
-import { PassThrough, Readable } from 'stream';
-import getVideoDurationInSeconds from 'get-video-duration';
-import { randomUUID } from 'crypto';
-import { FileMimeType, StorageConfigs } from '@core/types';
-import * as ytdl from '@distube/ytdl-core';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { Readable } from 'stream';
+import { EntityService } from '@core/services';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Download, DownloadSourceEnum, DownloadStatusEnum } from './entities';
+import { DeepPartial, Repository } from 'typeorm';
+import { CreateDownloadDto, UpdateDownloadDto } from './dto';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
+import { JobDownload } from '@core/types';
 
 @Injectable()
 export class DownloadService {
-  private readonly MAX_FILE_SIZE = 1 * 1024 * 1024 * 1024; // 1 GB
   private readonly logger = new Logger(DownloadService.name);
 
   constructor(
-    private readonly minioService: MinioService,
-    private readonly configService: ConfigService,
+    @InjectRepository(Download)
+    private readonly downloadRepository: Repository<Download>,
+    @InjectQueue('download_queue') private downloadQueue: Queue<JobDownload>,
+    private readonly entityService: EntityService,
   ) {}
 
-  async uploadToS3(
-    file: Buffer,
-    filename: string,
-    mimetype: string,
-    size?: number,
-  ) {
-    const { bucketName } = this.configService.get<StorageConfigs>('storage');
-
-    const duration = await getVideoDurationInSeconds(Readable.from(file));
-
-    const metaData = {
-      'Content-Type': mimetype,
-      duration,
-    };
-
-    await this.minioService.client.putObject(
-      bucketName,
-      filename,
-      file,
-      Buffer.byteLength(file),
-      metaData,
-    );
-    return {
-      filename,
-      duration,
-      message: 'File uploaded successfully',
-    };
-  }
-
-  async downloadFromGoogleDrive(fileId: string) {
-    const { mimeType, buffer } = await this.validateGoogleDriveFile(fileId);
-
-    try {
-      return this.uploadToS3(
-        buffer,
-        `${randomUUID()}.${FileMimeType[mimeType]}`,
-        mimeType,
-      );
-    } catch (error) {
-      this.logger.error(error);
-      throw new BadRequestException(
-        'Failed to download file from Google Drive',
-      );
+  async addJobToQueue(url: string) {
+    if (!url) {
+      throw new BadRequestException('URL is required');
     }
-  }
 
-  async validateGoogleDriveFile(fileId: string) {
+    let download = await this.createDownload({
+      url,
+    });
+
     try {
-      const fileUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+      //TODO: всрато все это выглядит, надо позже переделать
+      if (url.includes('drive.google.com')) {
+        const fileId = this.extractGoogleDriveFileId(url);
 
-      const response = await this.fetchFileAsBuffer(fileUrl);
+        download = await this.updateDownload(download.id, {
+          status: DownloadStatusEnum.PROCESSING,
+          source: DownloadSourceEnum.GOOGLE_DRIVE,
+          url,
+        });
 
-      const validMimeTypes = [
-        'video/mp4',
-        'audio/mpeg',
-        'audio/mp3',
-        'video/x-msvideo',
-      ];
-      if (!validMimeTypes.includes(response?.mimeType)) {
-        throw new BadRequestException(
-          'Invalid file type. Only video or audio files are allowed.',
-        );
-      }
+        await this.downloadQueue.add('google_drive', {
+          downloadId: download.id,
+          fileId,
+          url,
+        });
+      } else if (url.includes('yadi.sk') || url.includes('disk.yandex.ru')) {
+        download = await this.updateDownload(download.id, {
+          status: DownloadStatusEnum.REJECTED,
+          source: DownloadSourceEnum.YANDEX_DISK,
+          error: 'не сделал пока сори',
+          url,
+        });
 
-      if (response?.size > this.MAX_FILE_SIZE) {
-        throw new BadRequestException(
-          'File is too large. Maximum size allowed is 1GB.',
-        );
+        //TODO: яндекс пока не реализован, не тестировал(
+      } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        download = await this.updateDownload(download.id, {
+          source: DownloadSourceEnum.YOUTUBE,
+          status: DownloadStatusEnum.PROCESSING,
+          url,
+        });
+
+        await this.downloadQueue.add('ytdl_audio', {
+          downloadId: download.id,
+          url,
+        });
+      } else {
+        throw new BadRequestException('Unsupported URL');
       }
 
       return {
-        mimeType: response?.mimeType,
-        size: response?.size,
-        buffer: response.buffer,
+        downloadId: download.id,
+        message: 'Download was added to queue successfully',
       };
     } catch (error) {
-      this.logger.error(error);
-      throw new BadRequestException('Failed to validate Google Drive file');
+      console.log(error);
+      throw new BadRequestException('Failed to process the file');
     }
   }
 
-  async downloadFromYandexDisk(publicUrl: string): Promise<string> {
-    try {
-      const getDownloadLinkUrl = `https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key=${encodeURIComponent(publicUrl)}`;
-
-      const linkResponse = await axios.get(getDownloadLinkUrl);
-      const downloadLink = linkResponse.data.href;
-
-      if (!downloadLink) {
-        throw new BadRequestException(
-          'Failed to get download link from Yandex Disk',
-        );
-      }
-
-      const filePath = path.join(__dirname, 'temp', `${Date.now()}.file`);
-      const response = await axios({
-        url: downloadLink,
-        method: 'GET',
-        responseType: 'arraybuffer',
-      });
-
-      return 'string)';
-
-      // const writer = fs.createWriteStream(filePath);
-      // response.data.pipe(writer);
-
-      // await new Promise((resolve, reject) => {
-      //   writer.on('finish', resolve);
-      //   writer.on('error', reject);
-      // });
-
-      // return this.uploadToS3(filePath, `${Date.now()}.file`);
-    } catch (error) {
-      throw new BadRequestException('Failed to download file from Yandex Disk');
-    }
+  async getDownload(id: string) {
+    return this.entityService.findOne({
+      repository: this.downloadRepository,
+      cacheValue: id,
+      where: {
+        id,
+      },
+    })
   }
 
-  private async fetchFileAsBuffer(fileUrl: string) {
-    const response = await axios({
-      url: fileUrl,
-      method: 'GET',
-      responseType: 'stream',
+  async createDownload({ source, url, userId }: DeepPartial<CreateDownloadDto>) {
+    return this.entityService.save<Download>({
+      repository: this.downloadRepository,
+      payload: {
+        source,
+        url,
+        user: {
+          id: userId,
+        },
+      },
+      cacheValue: ({ id }) => id,
+    });
+  }
+
+  async updateDownload(id: string, payload: DeepPartial<UpdateDownloadDto>) {
+    const download = await this.downloadRepository.preload({
+      id,
+      ...payload,
     });
 
-    const size = parseInt(response.headers['content-length'], 10);
-    const mimeType = response.headers['content-type'];
+    if (!download) {
+      throw new Error('Download not found');
+    }
 
-    const chunks = [];
-
-    response.data.on('data', (chunk) => {
-      chunks.push(chunk);
+    const updateResult = await this.entityService.update({
+      payload: download,
+      repository: this.downloadRepository,
+      cacheValue: ({ id }) => id,
     });
-
-    await new Promise((resolve, reject) => {
-      response.data.on('end', resolve);
-      response.data.on('error', reject);
-    });
-
-    const buffer = Buffer.concat(chunks);
-
-    return { buffer, mimeType, size };
+    return updateResult;
   }
 
-  async downloadFromYoutubeAsAudio(url: string): Promise<any> {
-    try {
-      const info = await ytdl.getInfo(url);
+  private extractGoogleDriveFileId(url: string): string {
+    const match = url.match(/\/d\/(.*?)(\/|$)/);
 
-      const audioFormat = ytdl.chooseFormat(info.formats, {
-        filter: 'audioonly',
-      });
-      if (!audioFormat) {
-        throw new BadRequestException('No suitable audio format found');
-      }
-
-      if (audioFormat?.url) {
-        const { buffer, mimeType } = await this.fetchFileAsBuffer(
-          audioFormat.url,
-        );
-
-        const filename = `${randomUUID()}.mp3`;
-        return this.uploadToS3(buffer, filename, mimeType);
-      } else {
-        throw new BadRequestException('Error fetch file as buffer');
-      }
-    } catch (error) {
-      this.logger.error(
-        `Failed to download audio from YouTube: ${error.message}`,
-      );
-      throw new BadRequestException(
-        'Error downloading and uploading audio from YouTube',
-      );
+    if (!match || !match[1]) {
+      throw new BadRequestException('Invalid Google Drive URL');
     }
-  }
-
-  private async streamToBuffer(stream: Readable): Promise<Buffer> {
-    const chunks: Buffer[] = [];
-    for await (const chunk of stream) {
-      chunks.push(chunk);
-    }
-    return Buffer.concat(chunks);
+    return match[1];
   }
 }

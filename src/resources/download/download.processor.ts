@@ -1,0 +1,220 @@
+import { Process, Processor } from '@nestjs/bull';
+import { ConfigService } from '@nestjs/config';
+import { MinioService } from 'nestjs-minio-client';
+import { FileMimeType, JobDownload, StorageConfigs } from '@core/types';
+import getVideoDurationInSeconds from 'get-video-duration';
+import { Readable } from 'stream';
+import { randomUUID } from 'crypto';
+import { BadRequestException, Logger } from '@nestjs/common';
+import axios from 'axios';
+import * as path from 'path';
+import * as ytdl from '@distube/ytdl-core';
+import { DownloadService } from './download.service';
+import { Job } from 'bull';
+import { DownloadStatusEnum } from './entities';
+
+@Processor('download_queue')
+export class DownloadConsumer {
+  private readonly MAX_FILE_SIZE = 1 * 1024 * 1024 * 1024; // 1 GB
+  private logger = new Logger(DownloadConsumer.name);
+
+  constructor(
+    private readonly minioService: MinioService,
+    private readonly configService: ConfigService,
+    private readonly downloadService: DownloadService,
+  ) {}
+
+  @Process('ytdl_audio')
+  async downloadFromYoutubeAsAudio(job: Job<JobDownload>): Promise<any> {
+    const { downloadId, url } = job.data;
+
+    try {
+      const info = await ytdl.getInfo(url);
+
+      const audioFormat = ytdl.chooseFormat(info.formats, {
+        filter: 'audioonly',
+      });
+      if (!audioFormat) {
+        throw new BadRequestException('No suitable audio format found');
+      }
+
+      if (audioFormat?.url) {
+        const { buffer, mimeType } = await this.fetchFileAsBuffer(
+          audioFormat.url,
+        );
+
+        const filename = `${randomUUID()}.mp3`;
+        return this.uploadToS3(buffer, filename, mimeType, downloadId);
+      } else {
+        throw new BadRequestException('Error fetch file as buffer');
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to download audio from YouTube: ${error.message}`,
+      );
+      await this.downloadService.updateDownload(downloadId, {
+        error: 'Error downloading and uploading audio from YouTube', //TODO: добавить сохранеие жзона
+        status: DownloadStatusEnum.ERROR,
+      });
+      throw new BadRequestException(
+        'Error downloading and uploading audio from YouTube',
+      );
+    }
+  }
+
+  @Process('google_drive')
+  async downloadFromGoogleDrive(job: Job<JobDownload>) {
+    const { downloadId, fileId } = job.data;
+
+    const { mimeType, buffer } = await this.validateGoogleDriveFile(fileId);
+
+    try {
+      return this.uploadToS3(
+        buffer,
+        `${randomUUID()}.${FileMimeType[mimeType]}`,
+        mimeType,
+        downloadId,
+      );
+    } catch (error) {
+      this.logger.error(error);
+      await this.downloadService.updateDownload(downloadId, {
+        error: 'Failed to download file from Google Drive', //TODO: добавить сохранеие жзона
+        status: DownloadStatusEnum.ERROR,
+      });
+      throw new BadRequestException(
+        'Failed to download file from Google Drive',
+      );
+    }
+  }
+
+  async validateGoogleDriveFile(fileId: string) {
+    try {
+      const fileUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+
+      const response = await this.fetchFileAsBuffer(fileUrl);
+
+      const validMimeTypes = [
+        'video/mp4',
+        'audio/mpeg',
+        'audio/mp3',
+        'video/x-msvideo',
+      ];
+      if (!validMimeTypes.includes(response?.mimeType)) {
+        throw new BadRequestException(
+          'Invalid file type. Only video or audio files are allowed.',
+        );
+      }
+
+      if (response?.size > this.MAX_FILE_SIZE) {
+        throw new BadRequestException(
+          'File is too large. Maximum size allowed is 1GB.',
+        );
+      }
+
+      return {
+        mimeType: response?.mimeType,
+        size: response?.size,
+        buffer: response.buffer,
+      };
+    } catch (error) {
+      this.logger.error(error);
+      throw new BadRequestException('Failed to validate Google Drive file');
+    }
+  }
+
+  async downloadFromYandexDisk(publicUrl: string): Promise<string> {
+    try {
+      const getDownloadLinkUrl = `https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key=${encodeURIComponent(publicUrl)}`;
+
+      const linkResponse = await axios.get(getDownloadLinkUrl);
+      const downloadLink = linkResponse.data.href;
+
+      if (!downloadLink) {
+        throw new BadRequestException(
+          'Failed to get download link from Yandex Disk',
+        );
+      }
+
+      const filePath = path.join(__dirname, 'temp', `${Date.now()}.file`);
+      const response = await axios({
+        url: downloadLink,
+        method: 'GET',
+        responseType: 'arraybuffer',
+      });
+
+      return 'string)';
+
+      // const writer = fs.createWriteStream(filePath);
+      // response.data.pipe(writer);
+
+      // await new Promise((resolve, reject) => {
+      //   writer.on('finish', resolve);
+      //   writer.on('error', reject);
+      // });
+
+      // return this.uploadToS3(filePath, `${Date.now()}.file`);
+    } catch (error) {
+      throw new BadRequestException('Failed to download file from Yandex Disk');
+    }
+  }
+
+  private async fetchFileAsBuffer(fileUrl: string) {
+    const response = await axios({
+      url: fileUrl,
+      method: 'GET',
+      responseType: 'stream',
+    });
+
+    const size = parseInt(response.headers['content-length'], 10);
+    const mimeType = response.headers['content-type'];
+
+    const chunks = [];
+
+    response.data.on('data', (chunk) => {
+      chunks.push(chunk);
+    });
+
+    await new Promise((resolve, reject) => {
+      response.data.on('end', resolve);
+      response.data.on('error', reject);
+    });
+
+    const buffer = Buffer.concat(chunks);
+
+    return { buffer, mimeType, size };
+  }
+
+  private async uploadToS3(
+    file: Buffer,
+    filename: string,
+    mimetype: string,
+    downloadId: string,
+  ) {
+    const { bucketName } = this.configService.get<StorageConfigs>('storage');
+
+    const duration = await getVideoDurationInSeconds(Readable.from(file));
+
+    const metaData = {
+      'Content-Type': mimetype,
+      duration,
+    };
+
+    await this.minioService.client.putObject(
+      bucketName,
+      filename,
+      file,
+      Buffer.byteLength(file),
+      metaData,
+    );
+
+    await this.downloadService.updateDownload(downloadId, {
+      filename,
+      status: DownloadStatusEnum.DONE,
+    })
+    return {
+      filename,
+      duration,
+      message: 'File uploaded successfully',
+    };
+  }
+}

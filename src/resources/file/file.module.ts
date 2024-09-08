@@ -9,13 +9,14 @@ import { Task } from '../tasks/entities/task.entity';
 import { User } from '../user/entities/user.entity';
 import { MinioModuleConfig } from '@core/configs';
 import { MinioModule } from 'nestjs-minio-client';
+import { File } from './entities';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    TypeOrmModule.forFeature([Task, User]),
+    TypeOrmModule.forFeature([Task, User, File]),
     MinioModule.registerAsync(MinioModuleConfig),
     HttpModule,
     TaskModule,

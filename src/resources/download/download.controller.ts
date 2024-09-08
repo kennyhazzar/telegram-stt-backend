@@ -1,4 +1,4 @@
-import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, BadRequestException, Get, Query, NotFoundException } from '@nestjs/common';
 import { DownloadService } from './download.service';
 
 @Controller('download')
@@ -7,34 +7,17 @@ export class DownloadController {
 
   @Post('file')
   async downloadFile(@Body('url') url: string) {
-    if (!url) {
-      throw new BadRequestException('URL is required');
-    }
-
-    try {
-      //TODO: всрато все это выглядит, надо позже переделать
-      if (url.includes('drive.google.com')) {
-        const fileId = this.extractGoogleDriveFileId(url);
-        return await this.downloadService.downloadFromGoogleDrive(fileId);
-      } else if (url.includes('yadi.sk') || url.includes('disk.yandex.ru')) {
-        return await this.downloadService.downloadFromYandexDisk(url);
-      } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
-        return await this.downloadService.downloadFromYoutubeAsAudio(url);
-      } else {
-        throw new BadRequestException('Unsupported URL');
-      }
-    } catch (error) {
-      console.log(error);
-      throw new BadRequestException('Failed to process the file');
-    }
+    return this.downloadService.addJobToQueue(url);
   }
 
-  private extractGoogleDriveFileId(url: string): string {
-    const match = url.match(/\/d\/(.*?)(\/|$)/);
+  @Get('status/:id')
+  async getDownloadStatus(@Query('id') id: string) {
+    const download = await this.downloadService.getDownload(id);
 
-    if (!match || !match[1]) {
-      throw new BadRequestException('Invalid Google Drive URL');
+    if (!download) {
+      throw new NotFoundException();
     }
-    return match[1];
+
+    return download;
   }
 }
