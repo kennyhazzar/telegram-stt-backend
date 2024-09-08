@@ -41,7 +41,13 @@ export class Download extends PrimaryUuidBaseEntity {
   @Column({ comment: 'Название исходного файла', nullable: true })
   filename?: string;
 
-  @Column({ comment: 'Длина аудио/видео', type: 'int', nullable: true })
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    comment: 'Длина аудио/видео',
+    nullable: true,
+  })
   duration?: number;
 
   @Column({ comment: 'Текст ошибки, если что-то пошло не так', nullable: true })

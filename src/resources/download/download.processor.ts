@@ -190,31 +190,41 @@ export class DownloadConsumer {
     mimetype: string,
     downloadId: string,
   ) {
-    const { bucketName } = this.configService.get<StorageConfigs>('storage');
+    try {
+      const { bucketName } = this.configService.get<StorageConfigs>('storage');
 
-    const duration = await getVideoDurationInSeconds(Readable.from(file));
+      const duration = await getVideoDurationInSeconds(Readable.from(file));
 
-    const metaData = {
-      'Content-Type': mimetype,
-      duration,
-    };
+      const metaData = {
+        'Content-Type': mimetype,
+        duration,
+      };
 
-    await this.minioService.client.putObject(
-      bucketName,
-      filename,
-      file,
-      Buffer.byteLength(file),
-      metaData,
-    );
+      await this.minioService.client.putObject(
+        bucketName,
+        filename,
+        file,
+        Buffer.byteLength(file),
+        metaData,
+      );
 
-    await this.downloadService.updateDownload(downloadId, {
-      filename,
-      status: DownloadStatusEnum.DONE,
-    })
-    return {
-      filename,
-      duration,
-      message: 'File uploaded successfully',
-    };
+      await this.downloadService.updateDownload(downloadId, {
+        filename,
+        status: DownloadStatusEnum.DONE,
+        duration,
+      });
+      return {
+        filename,
+        duration,
+        message: 'File uploaded successfully',
+      };
+    } catch (error) {
+      this.logger.error(error);
+
+      await this.downloadService.updateDownload(downloadId, {
+        status: DownloadStatusEnum.ERROR,
+        error: 'Error Minio upload',
+      });
+    }
   }
 }

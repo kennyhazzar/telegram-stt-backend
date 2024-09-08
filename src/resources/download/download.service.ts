@@ -37,7 +37,6 @@ export class DownloadService {
         download = await this.updateDownload(download.id, {
           status: DownloadStatusEnum.PROCESSING,
           source: DownloadSourceEnum.GOOGLE_DRIVE,
-          url,
         });
 
         await this.downloadQueue.add('google_drive', {
@@ -50,7 +49,6 @@ export class DownloadService {
           status: DownloadStatusEnum.REJECTED,
           source: DownloadSourceEnum.YANDEX_DISK,
           error: 'не сделал пока сори',
-          url,
         });
 
         //TODO: яндекс пока не реализован, не тестировал(
@@ -58,7 +56,6 @@ export class DownloadService {
         download = await this.updateDownload(download.id, {
           source: DownloadSourceEnum.YOUTUBE,
           status: DownloadStatusEnum.PROCESSING,
-          url,
         });
 
         await this.downloadQueue.add('ytdl_audio', {
@@ -66,6 +63,11 @@ export class DownloadService {
           url,
         });
       } else {
+        await this.updateDownload(download.id, {
+          status: DownloadStatusEnum.ERROR,
+          error: 'Unsupported URL',
+        });
+
         throw new BadRequestException('Unsupported URL');
       }
 
@@ -86,10 +88,14 @@ export class DownloadService {
       where: {
         id,
       },
-    })
+    });
   }
 
-  async createDownload({ source, url, userId }: DeepPartial<CreateDownloadDto>) {
+  async createDownload({
+    source,
+    url,
+    userId,
+  }: DeepPartial<CreateDownloadDto>) {
     return this.entityService.save<Download>({
       repository: this.downloadRepository,
       payload: {

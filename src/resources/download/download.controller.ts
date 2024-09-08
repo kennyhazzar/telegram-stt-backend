@@ -1,4 +1,13 @@
-import { Controller, Post, Body, BadRequestException, Get, Query, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  BadRequestException,
+  Get,
+  Query,
+  NotFoundException,
+  Param,
+} from '@nestjs/common';
 import { DownloadService } from './download.service';
 
 @Controller('download')
@@ -11,7 +20,11 @@ export class DownloadController {
   }
 
   @Get('status/:id')
-  async getDownloadStatus(@Query('id') id: string) {
+  async getDownloadStatus(@Param('id') id: string) {
+    if (!id) {
+      throw new BadRequestException('please provide uuid');
+    }
+
     const download = await this.downloadService.getDownload(id);
 
     if (!download) {

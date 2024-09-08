@@ -14,4 +14,5 @@ export class UpdateDownloadDto {
   user?: User;
   error?: string;
   url?: string;
+  duration?: number;
 }
