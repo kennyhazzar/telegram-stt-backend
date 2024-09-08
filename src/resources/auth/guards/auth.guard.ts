@@ -10,7 +10,10 @@ import { UserService } from '@resources/user/user.service';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService, private readonly usersService: UserService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly usersService: UserService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -28,7 +31,9 @@ export class AuthGuard implements CanActivate {
 
       request.user = user;
     } catch (e) {
-      throw new UnauthorizedException(typeof e === 'string' ? e : 'Invalid token');
+      throw new UnauthorizedException(
+        typeof e === 'string' ? e : 'Invalid token',
+      );
     }
 
     return true;

@@ -69,7 +69,7 @@ export class AuthService {
       const payload = {
         id: user.id,
         telegramId: user.telegramId,
-      }
+      };
 
       return {
         access_token: this.jwtService.sign(payload),

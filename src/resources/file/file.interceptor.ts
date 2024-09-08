@@ -12,7 +12,10 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class MinioFileInterceptor implements NestInterceptor {
-  constructor(private readonly minioService: MinioService, private readonly configService: ConfigService) {}
+  constructor(
+    private readonly minioService: MinioService,
+    private readonly configService: ConfigService,
+  ) {}
 
   intercept<T>(context: ExecutionContext, next: CallHandler): Observable<T> {
     const fileInterceptor = FileInterceptor(

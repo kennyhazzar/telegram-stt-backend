@@ -11,14 +11,18 @@ import { randomUUID } from 'crypto';
 
 @Injectable()
 export class MinioStorage implements StorageEngine {
-  constructor(private readonly minioService: MinioService, private readonly configService: ConfigService) {}
+  constructor(
+    private readonly minioService: MinioService,
+    private readonly configService: ConfigService,
+  ) {}
 
   _handleFile(
     req: Request,
     file: Express.Multer.File,
     cb: (error?: any, info?: Partial<Express.Multer.File>) => void,
   ): void {
-    const { bucketName: bucket } = this.configService.get<StorageConfigs>('storage');
+    const { bucketName: bucket } =
+      this.configService.get<StorageConfigs>('storage');
     const fileExtName = extname(file.originalname);
     const fileName = `${randomUUID()}${fileExtName.toLowerCase()}`;
 

@@ -17,14 +17,16 @@ export class TariffService {
     let tariff = await this.tariffRepository.findOne({
       where: {
         isActive: true,
-      }
+      },
     });
-    
+
     if (!tariff) {
-      tariff = this.tariffRepository.create({ pricePerMinute: this.pricePerMinute });
+      tariff = this.tariffRepository.create({
+        pricePerMinute: this.pricePerMinute,
+      });
       await this.tariffRepository.save(tariff);
     }
-    
+
     return tariff;
   }
 
@@ -35,8 +37,8 @@ export class TariffService {
   }
 
   get pricePerMinute() {
-
-    const price = this.configService.get<CommonConfigs>('common')?.pricePerMinute;
+    const price =
+      this.configService.get<CommonConfigs>('common')?.pricePerMinute;
 
     if (!price) {
       return 5;

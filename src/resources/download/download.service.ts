@@ -12,7 +12,7 @@ import * as ytdl from '@distube/ytdl-core';
 @Injectable()
 export class DownloadService {
   private readonly MAX_FILE_SIZE = 1 * 1024 * 1024 * 1024; // 1 GB
-  private readonly logger = new Logger(DownloadService.name)
+  private readonly logger = new Logger(DownloadService.name);
 
   constructor(
     private readonly minioService: MinioService,
@@ -166,13 +166,17 @@ export class DownloadService {
     try {
       const info = await ytdl.getInfo(url);
 
-      const audioFormat = ytdl.chooseFormat(info.formats, { filter: 'audioonly',  });
+      const audioFormat = ytdl.chooseFormat(info.formats, {
+        filter: 'audioonly',
+      });
       if (!audioFormat) {
         throw new BadRequestException('No suitable audio format found');
       }
 
       if (audioFormat?.url) {
-        const { buffer, mimeType } = await this.fetchFileAsBuffer(audioFormat.url);
+        const { buffer, mimeType } = await this.fetchFileAsBuffer(
+          audioFormat.url,
+        );
 
         const filename = `${randomUUID()}.mp3`;
         return this.uploadToS3(buffer, filename, mimeType);
@@ -180,8 +184,12 @@ export class DownloadService {
         throw new BadRequestException('Error fetch file as buffer');
       }
     } catch (error) {
-      this.logger.error(`Failed to download audio from YouTube: ${error.message}`);
-      throw new BadRequestException('Error downloading and uploading audio from YouTube');
+      this.logger.error(
+        `Failed to download audio from YouTube: ${error.message}`,
+      );
+      throw new BadRequestException(
+        'Error downloading and uploading audio from YouTube',
+      );
     }
   }
 
