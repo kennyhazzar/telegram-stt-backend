@@ -15,4 +15,5 @@ export class UpdateDownloadDto {
   error?: string;
   url?: string;
   duration?: number;
+  title?: string;
 }

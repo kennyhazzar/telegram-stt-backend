@@ -35,6 +35,9 @@ export class Download extends PrimaryUuidBaseEntity {
   })
   status: DownloadStatusEnum;
 
+  @Column({ comment: 'Пользовательское название файла', nullable: true })
+  title?: string;
+
   @Column({ comment: 'Ссылка на файл (если есть)', nullable: true })
   url?: string;
 

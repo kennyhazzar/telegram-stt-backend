@@ -5,13 +5,14 @@ import { FileMimeType, JobDownload, StorageConfigs } from '@core/types';
 import getVideoDurationInSeconds from 'get-video-duration';
 import { Readable } from 'stream';
 import { randomUUID } from 'crypto';
-import { BadRequestException, Logger } from '@nestjs/common';
+import { BadRequestException, Inject, Logger } from '@nestjs/common';
 import axios from 'axios';
 import * as path from 'path';
 import * as ytdl from '@distube/ytdl-core';
 import { DownloadService } from './download.service';
 import { Job } from 'bull';
 import { DownloadStatusEnum } from './entities';
+import { Cache } from 'cache-manager';
 
 @Processor('download_queue')
 export class DownloadConsumer {
@@ -22,6 +23,7 @@ export class DownloadConsumer {
     private readonly minioService: MinioService,
     private readonly configService: ConfigService,
     private readonly downloadService: DownloadService,
+    @Inject('CACHE_MANAGER') private readonly cacheManager: Cache,
   ) {}
 
   @Process('ytdl_audio')
@@ -29,7 +31,17 @@ export class DownloadConsumer {
     const { downloadId, url } = job.data;
 
     try {
-      const info = await ytdl.getInfo(url);
+      const videoId = ytdl.getVideoID(url);
+
+      const cacheKey = `ytdl_info_${videoId}`;
+
+      let info = await this.cacheManager.get<ytdl.videoInfo>(cacheKey);
+
+      if (!info) {
+        info = await ytdl.getInfo(url);
+
+        await this.cacheManager.set(cacheKey, info);
+      }
 
       const audioFormat = ytdl.chooseFormat(info.formats, {
         filter: 'audioonly',
