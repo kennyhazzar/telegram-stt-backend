@@ -40,8 +40,12 @@ export class DownloadConsumer {
       if (!info) {
         info = await ytdl.getInfo(url);
 
-        await this.cacheManager.set(cacheKey, info);
+        await this.cacheManager.set(cacheKey, info, { ttl: 600 } as any);
       }
+
+      await this.downloadService.updateDownload(downloadId, {
+        title: info?.player_response?.videoDetails?.title,
+      })
 
       const audioFormat = ytdl.chooseFormat(info.formats, {
         filter: 'audioonly',
