@@ -88,6 +88,28 @@ export class DownloadService {
       where: {
         id,
       },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        url: true,
+        duration: true,
+        source: true,
+        createdAt: true,
+        updatedAt: true,
+        error: true,
+      },
+      transform: (dl) => ({
+        id: dl.id,
+        title: dl.title,
+        status: dl.status,
+        url: dl.url,
+        duration: dl.duration ? +dl.duration : null,
+        source: dl.source,
+        createdAt: dl.createdAt,
+        updatedAt: dl.updatedAt,
+        error: dl.error,
+      })
     });
   }
 

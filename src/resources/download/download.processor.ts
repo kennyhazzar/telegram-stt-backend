@@ -49,6 +49,7 @@ export class DownloadConsumer {
 
       const audioFormat = ytdl.chooseFormat(info.formats, {
         filter: 'audioonly',
+        quality: 'lowestaudio',
       });
       if (!audioFormat) {
         throw new BadRequestException('No suitable audio format found');
@@ -82,7 +83,13 @@ export class DownloadConsumer {
   async downloadFromGoogleDrive(job: Job<JobDownload>) {
     const { downloadId, fileId } = job.data;
 
-    const { mimeType, buffer } = await this.validateGoogleDriveFile(fileId);
+    const { mimeType, buffer, title } = await this.validateGoogleDriveFile(fileId);
+
+    if (title) {
+      await this.downloadService.updateDownload(downloadId, {
+        title,
+      });
+    }
 
     try {
       return this.uploadToS3(
@@ -131,6 +138,7 @@ export class DownloadConsumer {
         mimeType: response?.mimeType,
         size: response?.size,
         buffer: response.buffer,
+        title: response?.title,
       };
     } catch (error) {
       this.logger.error(error);
@@ -181,6 +189,16 @@ export class DownloadConsumer {
       responseType: 'stream',
     });
 
+    let title: string;
+
+    try {
+      const contentDisposition = response.headers['content-disposition'] as string;
+
+      title = this.extractFilename(contentDisposition);
+    } catch (error) {
+      console.log(error);
+    }
+
     const size = parseInt(response.headers['content-length'], 10);
     const mimeType = response.headers['content-type'];
 
@@ -197,7 +215,7 @@ export class DownloadConsumer {
 
     const buffer = Buffer.concat(chunks);
 
-    return { buffer, mimeType, size };
+    return { buffer, mimeType, size, title };
   }
 
   private async uploadToS3(
@@ -242,5 +260,19 @@ export class DownloadConsumer {
         error: 'Error Minio upload',
       });
     }
+  }
+
+  private extractFilename(contentDisposition: string): string {
+    const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+    if (!filenameMatch || filenameMatch.length < 2) {
+      throw new Error('Filename not found in Content-Disposition header');
+    }
+  
+    const encodedFilename = filenameMatch[1];
+  
+    const buffer = Buffer.from(encodedFilename, 'binary');
+    const decodedFilename = buffer.toString('utf-8');
+  
+    return decodedFilename;
   }
 }
