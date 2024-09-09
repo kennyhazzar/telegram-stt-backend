@@ -1,5 +1,4 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { Readable } from 'stream';
 import { EntityService } from '@core/services';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Download, DownloadSourceEnum, DownloadStatusEnum } from './entities';
@@ -20,13 +19,14 @@ export class DownloadService {
     private readonly entityService: EntityService,
   ) {}
 
-  async addJobToQueue(url: string) {
+  async addJobToQueue(url: string, userId: string) {
     if (!url) {
       throw new BadRequestException('URL is required');
     }
 
     let download = await this.createDownload({
       url,
+      userId,
     });
 
     try {
@@ -76,17 +76,20 @@ export class DownloadService {
         message: 'Download was added to queue successfully',
       };
     } catch (error) {
-      console.log(error);
+      this.logger.error(error);
       throw new BadRequestException('Failed to process the file');
     }
   }
 
-  async getDownload(id: string) {
+  async getDownload(where: { id: string; userId: string }) {
     return this.entityService.findOne({
       repository: this.downloadRepository,
-      cacheValue: id,
+      cacheValue: where.id,
       where: {
-        id,
+        id: where.id,
+        user: {
+          id: where.userId,
+        }
       },
       select: {
         id: true,
@@ -109,7 +112,7 @@ export class DownloadService {
         createdAt: dl.createdAt,
         updatedAt: dl.updatedAt,
         error: dl.error,
-      })
+      }),
     });
   }
 

@@ -45,7 +45,7 @@ export class DownloadConsumer {
 
       await this.downloadService.updateDownload(downloadId, {
         title: info?.player_response?.videoDetails?.title,
-      })
+      });
 
       const audioFormat = ytdl.chooseFormat(info.formats, {
         filter: 'audioonly',
@@ -83,7 +83,8 @@ export class DownloadConsumer {
   async downloadFromGoogleDrive(job: Job<JobDownload>) {
     const { downloadId, fileId } = job.data;
 
-    const { mimeType, buffer, title } = await this.validateGoogleDriveFile(fileId);
+    const { mimeType, buffer, title } =
+      await this.validateGoogleDriveFile(fileId);
 
     if (title) {
       await this.downloadService.updateDownload(downloadId, {
@@ -192,7 +193,9 @@ export class DownloadConsumer {
     let title: string;
 
     try {
-      const contentDisposition = response.headers['content-disposition'] as string;
+      const contentDisposition = response.headers[
+        'content-disposition'
+      ] as string;
 
       title = this.extractFilename(contentDisposition);
     } catch (error) {
@@ -267,12 +270,12 @@ export class DownloadConsumer {
     if (!filenameMatch || filenameMatch.length < 2) {
       throw new Error('Filename not found in Content-Disposition header');
     }
-  
+
     const encodedFilename = filenameMatch[1];
-  
+
     const buffer = Buffer.from(encodedFilename, 'binary');
     const decodedFilename = buffer.toString('utf-8');
-  
+
     return decodedFilename;
   }
 }
