@@ -22,7 +22,11 @@ export class MinioFileInterceptor implements NestInterceptor {
   intercept<T>(context: ExecutionContext, next: CallHandler): Observable<T> {
     const fileInterceptor = FileInterceptor(
       'file',
-      fileInterceptorConfig(this.minioService, this.configService, this.downloadService),
+      fileInterceptorConfig(
+        this.minioService,
+        this.configService,
+        this.downloadService,
+      ),
     );
     const callInterceptor = new (fileInterceptor as any)();
     return callInterceptor.intercept(context, next);

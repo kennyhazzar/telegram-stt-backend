@@ -81,7 +81,10 @@ export class DownloadService {
     }
   }
 
-  async addUploadToQueue(userId: string, payload: Partial<JobDownload>): Promise<Download> {
+  async addUploadToQueue(
+    userId: string,
+    payload: Partial<JobDownload>,
+  ): Promise<Download> {
     const download = await this.createDownload({
       userId,
       source: DownloadSourceEnum.UPLOAD,
@@ -104,7 +107,7 @@ export class DownloadService {
         id: where.id,
         user: {
           id: where.userId,
-        }
+        },
       },
       select: {
         id: true,
@@ -174,7 +177,7 @@ export class DownloadService {
       where: {
         user: {
           id: userId,
-        }
+        },
       },
       select: {
         id: true,
@@ -186,8 +189,11 @@ export class DownloadService {
         createdAt: true,
         updatedAt: true,
         error: true,
-      }
-    })
+      },
+      order: {
+        createdAt: 'desc',
+      },
+    });
   }
 
   private extractGoogleDriveFileId(url: string): string {

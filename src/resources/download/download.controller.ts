@@ -31,11 +31,11 @@ export class DownloadController {
       if (!file) {
         throw new BadRequestException('File is required');
       }
-      
+
       return {
         downloadId: file.destination,
         message: 'Download was added to queue successfully',
-      };;
+      };
     } catch (error) {
       this.logger.error(error);
 
@@ -76,9 +76,7 @@ export class DownloadController {
 
   @Get('status')
   @UseGuards(ThrottlerBehindProxyGuard, AuthGuard)
-  async getDownloadStatuses(
-    @Req() request: UserRequestContext,
-  ) {
+  async getDownloadStatuses(@Req() request: UserRequestContext) {
     return this.downloadService.getDownloadStatuses(request.user.id);
   }
 }

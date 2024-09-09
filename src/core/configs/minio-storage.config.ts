@@ -39,12 +39,14 @@ export class MinioStorage implements StorageEngine {
       const fileBuffer = Buffer.concat(buffer);
 
       try {
-
-        const download = await this.downloadService.addUploadToQueue(req.user.id, {
-          buffer: fileBuffer,
-          mimetype: file.mimetype,
-          title: file.originalname,
-        })
+        const download = await this.downloadService.addUploadToQueue(
+          req.user.id,
+          {
+            buffer: fileBuffer,
+            mimetype: file.mimetype,
+            title: file.originalname,
+          },
+        );
 
         cb(null, { filename: fileName, destination: download.id });
       } catch (error) {
