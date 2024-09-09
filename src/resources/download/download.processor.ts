@@ -221,6 +221,22 @@ export class DownloadConsumer {
     return { buffer, mimeType, size, title };
   }
 
+  @Process('upload_file')
+  async uploadFile(payload: Job<JobDownload>) {
+    const { buffer, mimetype, downloadId } = payload.data;
+
+    await this.downloadService.updateDownload(downloadId, {
+      status: DownloadStatusEnum.PROCESSING,
+    });
+
+    return this.uploadToS3(
+      Buffer.from(buffer),
+      `${randomUUID()}.${FileMimeType[mimetype]}`,
+      mimetype,
+      downloadId,
+    );
+  }
+
   private async uploadToS3(
     file: Buffer,
     filename: string,

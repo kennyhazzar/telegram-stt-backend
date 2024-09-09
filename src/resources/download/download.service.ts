@@ -81,6 +81,21 @@ export class DownloadService {
     }
   }
 
+  async addUploadToQueue(userId: string, payload: Partial<JobDownload>): Promise<Download> {
+    const download = await this.createDownload({
+      userId,
+      source: DownloadSourceEnum.UPLOAD,
+      title: payload.title,
+    });
+
+    this.downloadQueue.add('upload_file', {
+      ...payload,
+      downloadId: download.id,
+    });
+
+    return download;
+  }
+
   async getDownload(where: { id: string; userId: string }) {
     return this.entityService.findOne({
       repository: this.downloadRepository,
@@ -120,6 +135,7 @@ export class DownloadService {
     source,
     url,
     userId,
+    title,
   }: DeepPartial<CreateDownloadDto>) {
     return this.entityService.save<Download>({
       repository: this.downloadRepository,
@@ -129,6 +145,7 @@ export class DownloadService {
         user: {
           id: userId,
         },
+        title,
       },
       cacheValue: ({ id }) => id,
     });
@@ -150,6 +167,27 @@ export class DownloadService {
       cacheValue: ({ id }) => id,
     });
     return updateResult;
+  }
+
+  async getDownloadStatuses(userId: string) {
+    return this.downloadRepository.find({
+      where: {
+        user: {
+          id: userId,
+        }
+      },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        url: true,
+        duration: true,
+        source: true,
+        createdAt: true,
+        updatedAt: true,
+        error: true,
+      }
+    })
   }
 
   private extractGoogleDriveFileId(url: string): string {

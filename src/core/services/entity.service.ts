@@ -247,11 +247,11 @@ export class EntityService {
     return deleteResult;
   }
 
-  getCacheKey(key: string, cacheValue: string) {
+  private getCacheKey(key: string, cacheValue: string) {
     return `${key.toLowerCase()}_${cacheValue}`;
   }
 
-  getRepositoryName<T>(repository: Repository<T>) {
+  private getRepositoryName<T>(repository: Repository<T>) {
     return repository.metadata.name.toLowerCase();
   }
 }

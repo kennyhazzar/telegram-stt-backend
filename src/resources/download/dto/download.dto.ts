@@ -5,6 +5,7 @@ export class CreateDownloadDto {
   source: DownloadSourceEnum;
   url: string;
   userId?: string;
+  title?: string;
 }
 
 export class UpdateDownloadDto {

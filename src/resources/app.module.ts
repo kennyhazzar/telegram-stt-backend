@@ -14,7 +14,6 @@ import { DownloadModule } from './download/download.module';
 import { TaskModule } from './tasks/task.module';
 import { TranscriptionModule } from './transcription/transcription.module';
 import { UserModule } from './user/user.module';
-import { FileModule } from './file/file.module';
 import { TariffModule } from './tariff/tariff.module';
 import { BullModule } from '@nestjs/bull';
 
@@ -30,7 +29,6 @@ import { BullModule } from '@nestjs/bull';
     TaskModule,
     TranscriptionModule,
     UserModule,
-    FileModule,
     TariffModule,
   ],
 })
