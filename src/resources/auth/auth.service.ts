@@ -61,6 +61,8 @@ export class AuthService {
   async loginBySecret(telegramData: string) {
     const validateInitData = this.validateTelegramData(telegramData);
 
+    console.log(validateInitData);
+
     if (validateInitData.isValid) {
       const { user: telegramUser } = validateInitData;
 
