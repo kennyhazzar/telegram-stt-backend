@@ -27,6 +27,7 @@ export class AuthService {
     const data: any = Object.fromEntries(urlSearchParams.entries());
 
     const checkString = Object.keys(data)
+      .filter((key) => key !== 'hash')
       .sort()
       .map((key) => `${key}=${data[key]}`)
       .join('\n');
@@ -44,13 +45,15 @@ export class AuthService {
     const isValid = signature === data.hash;
 
     if (isValid) {
+      const user = JSON.parse(data.user);
+
       return {
         isValid,
         user: {
-          telegramId: data.user.id,
-          username: data.user.username,
-          firstName: data.user.first_name,
-          secondName: data.user.last_name,
+          telegramId: user.id,
+          username: user.username,
+          firstName: user.first_name,
+          secondName: user.last_name,
         }
       };
     } else {
@@ -60,8 +63,6 @@ export class AuthService {
 
   async loginBySecret(telegramData: string) {
     const validateInitData = this.validateTelegramData(telegramData);
-
-    console.log(validateInitData);
 
     if (validateInitData.isValid) {
       const { user: telegramUser } = validateInitData;
