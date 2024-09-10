@@ -22,16 +22,17 @@ export class AuthService {
     this.env = this.nodeEnv;
   }
 
-  validateTelegramData(telegramData: TelegramDataDto): boolean {
-    const { hash, ...dataToCheck } = telegramData;
+  validateTelegramData(initData: string) {
+    const urlSearchParams = new URLSearchParams(initData);
+    const data: any = Object.fromEntries(urlSearchParams.entries());
 
-    const checkString = Object.keys(dataToCheck)
+    const checkString = Object.keys(data)
       .sort()
-      .map((key) => `${key}=${dataToCheck[key]}`)
+      .map((key) => `${key}=${data[key]}`)
       .join('\n');
 
     const secretKey = crypto
-      .createHash('sha256')
+      .createHmac('sha256', 'WebAppData')
       .update(this.botToken)
       .digest();
 
@@ -40,22 +41,40 @@ export class AuthService {
       .update(checkString)
       .digest('hex');
 
-    return signature === hash;
+    const isValid = signature === data.hash;
+
+    if (isValid) {
+      return {
+        isValid,
+        user: {
+          telegramId: data.user.id,
+          username: data.user.username,
+          firstName: data.user.first_name,
+          secondName: data.user.last_name,
+        }
+      };
+    } else {
+      return { isValid };
+    }
   }
 
-  async loginBySecret(telegramData: TelegramDataDto) {
-    if (this.validateTelegramData(telegramData) || this.env === 'development') {
+  async loginBySecret(telegramData: string) {
+    const validateInitData = this.validateTelegramData(telegramData);
+
+    if (validateInitData.isValid) {
+      const { user: telegramUser } = validateInitData;
+
       let user = await this.usersService.getUserByTelegramId(
-        telegramData.telegramId,
+        telegramUser.telegramId,
       );
 
       if (!user) {
         try {
           user = await this.usersService.createUser({
-            telegramId: telegramData.telegramId,
-            username: telegramData?.username,
-            firstName: telegramData?.firstName,
-            secondName: telegramData?.secondName,
+            telegramId: telegramUser.telegramId,
+            username: telegramUser?.username,
+            firstName: telegramUser?.firstName,
+            secondName: telegramUser?.secondName,
           });
         } catch (error) {
           console.log(error);

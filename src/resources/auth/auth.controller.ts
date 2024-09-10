@@ -9,7 +9,7 @@ export class AuthController {
 
   @Post('tg-webapp')
   @UseGuards(ThrottlerBehindProxyGuard)
-  loginViaTelegram(@Body() telegramData: TelegramDataDto) {
-    return this.authService.loginBySecret(telegramData);
+  loginViaTelegram(@Body() { data }: TelegramDataDto) {
+    return this.authService.loginBySecret(data);
   }
 }

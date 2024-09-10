@@ -5,11 +5,8 @@ import { StorageEngine } from 'multer';
 import { extname } from 'path';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { StorageConfigs, UserRequestContext } from '../types';
-import { Readable } from 'typeorm/platform/PlatformTools';
-import getVideoDurationInSeconds from 'get-video-duration';
 import { randomUUID } from 'crypto';
 import { DownloadService } from '@resources/download/download.service';
-import { DownloadSourceEnum } from '@resources/download/entities';
 
 @Injectable()
 export class MinioStorage implements StorageEngine {
@@ -24,8 +21,6 @@ export class MinioStorage implements StorageEngine {
     file: Express.Multer.File,
     cb: (error?: any, info?: Partial<Express.Multer.File>) => void,
   ): void {
-    const { bucketName: bucket } =
-      this.configService.get<StorageConfigs>('storage');
     const fileExtName = extname(file.originalname);
     const fileName = `${randomUUID()}${fileExtName.toLowerCase()}`;
 
