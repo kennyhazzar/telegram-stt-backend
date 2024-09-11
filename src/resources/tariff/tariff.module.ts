@@ -1,12 +1,17 @@
 import { Module } from '@nestjs/common';
 import { TariffService } from './tariff.service';
-import { TariffController } from './tariff.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Tariff } from './entities';
+import { EntityService } from '@core/services';
+import { CacheConfig } from '@core/configs';
+import { CacheModule } from '@nestjs/cache-manager';
+import { RedisClientOptions } from 'redis';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Tariff])],
-  controllers: [TariffController],
-  providers: [TariffService],
+  imports: [
+    CacheModule.registerAsync<RedisClientOptions>(CacheConfig),
+    TypeOrmModule.forFeature([Tariff]),
+  ],
+  providers: [TariffService, EntityService],
 })
 export class TariffModule {}

@@ -54,7 +54,7 @@ export class AuthService {
           username: user.username,
           firstName: user.first_name,
           secondName: user.last_name,
-        }
+        },
       };
     } else {
       return { isValid };
