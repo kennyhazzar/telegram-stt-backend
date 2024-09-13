@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import {
   BullConfig,
@@ -16,6 +16,9 @@ import { TranscriptionModule } from './transcription/transcription.module';
 import { UserModule } from './user/user.module';
 import { TariffModule } from './tariff/tariff.module';
 import { BullModule } from '@nestjs/bull';
+import { RequestLoggerMiddleware, RequestLogService } from '@resources/middlewares';
+import { RequestLog } from './middlewares/request-logger/entities';
+import { APP_FILTER } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -30,6 +33,12 @@ import { BullModule } from '@nestjs/bull';
     TranscriptionModule,
     UserModule,
     TariffModule,
+    TypeOrmModule.forFeature([RequestLog])
   ],
+  providers: [RequestLogService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RequestLoggerMiddleware).forRoutes('*');
+  }
+}
