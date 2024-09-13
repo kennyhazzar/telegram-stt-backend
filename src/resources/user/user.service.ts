@@ -14,36 +14,48 @@ export class UserService {
     private readonly entityService: EntityService,
   ) {}
 
-  async getUserByTelegramId(telegramId: number) {
+  async getUser({
+    telegramId,
+    userId,
+    errorHttp,
+    withBalance,
+  }: {
+    telegramId?: number;
+    userId?: string;
+    errorHttp?: boolean;
+    withBalance?: boolean;
+  }) {
+    if (!telegramId && !userId) {
+      throw Error('need telegramId or userId');
+    }
+
     const user = await this.entityService.findOne({
       repository: this.userRepository,
-      cacheValue: `telegram_${telegramId}`,
+      cacheValue: `user_${telegramId && userId}`,
       queryBuilderAlias: 'user',
-      queryBuilder: (qb) =>
-        qb.where('user.telegramId = :telegramId', { telegramId }),
-    });
-
-    return user;
-  }
-
-  async getUserWithBalance(userId: string): Promise<any> {
-    const user = await this.entityService.findOne({
-      repository: this.userRepository,
-      cacheValue: `with_balance_${userId}`,
-      queryBuilderAlias: 'user',
-      queryBuilder: (qb) =>
-        qb
-          .leftJoinAndSelect('user.balance', 'balance')
-          .where('user.id = :userId', { userId })
-          .addSelect((subQuery) => {
+      queryBuilder: (qb) => {
+        if (withBalance) {
+          qb.addSelect((subQuery) => {
             return subQuery
               .select('SUM(balance.amount)', 'totalAmount')
               .from(Balance, 'balance')
               .where('balance.userId = user.id');
-          }, 'totalAmount'),
+          }, 'totalAmount');
+        }
+
+        if (telegramId) {
+          return qb.andWhere('user.telegramId = :telegramId', { telegramId });
+        }
+
+        if (userId) {
+          return qb
+            .leftJoinAndSelect('user.balance', 'balance')
+            .andWhere('user.id = :userId', { userId });
+        }
+      },
     });
 
-    if (!user) {
+    if (!user && errorHttp) {
       throw new NotFoundException('User not found');
     }
 
@@ -57,7 +69,7 @@ export class UserService {
     secondName?: string;
     languageCode?: string;
     md5?: string;
-    source?: UserSourceEnum,
+    source?: UserSourceEnum;
   }): Promise<User> {
     return this.entityService.save<User>({
       repository: this.userRepository,
@@ -85,8 +97,8 @@ export class UserService {
       cacheValue: (user) => user.id,
       affectCache: async (cacheManager) => {
         await Promise.allSettled([
-          cacheManager.del(`user_with_balance_${user.id}`),
-          cacheManager.del(`telegram_${user.telegramId}`),
+          cacheManager.del(`user_${user.id}`),
+          cacheManager.del(`user_${user.telegramId}`),
         ]);
       },
     });
@@ -99,8 +111,8 @@ export class UserService {
       repository: this.userRepository,
       affectCache: async (cacheManager) => {
         await Promise.allSettled([
-          cacheManager.del(`user_with_balance_${user.id}`),
-          cacheManager.del(`telegram_${user.telegramId}`),
+          cacheManager.del(`user_${user.id}`),
+          cacheManager.del(`user_${user.telegramId}`),
         ]);
       },
     });

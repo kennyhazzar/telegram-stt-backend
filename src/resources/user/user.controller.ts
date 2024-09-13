@@ -20,7 +20,11 @@ export class UserController {
   @Get()
   @UseGuards(ThrottlerBehindProxyGuard, AuthGuard)
   async getUser(@Req() request: UserRequestContext) {
-    return this.userService.getUserWithBalance(request.user.id);
+    return this.userService.getUser({
+      userId: request.user.id,
+      withBalance: true,
+      errorHttp: true,
+    });
   }
 
   @Post()
