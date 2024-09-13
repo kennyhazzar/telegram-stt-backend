@@ -1,15 +1,21 @@
 import { Update, Use } from 'nestjs-telegraf';
-import {
-  MainUpdateContext,
-} from '@core/types';
+import { CommonConfigs, MainUpdateContext } from '@core/types';
 import { UserService } from '@resources/user/user.service';
 import { User, UserSourceEnum } from '../../user';
 import * as generateMd5 from 'md5';
-
+import { JwtService } from '@nestjs/jwt';
+import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 @Update()
 export class MainUpdate {
-  constructor(private readonly usersService: UserService) {}
+  private logger = new Logger(`tg-${MainUpdate.name}`);
+
+  constructor(
+    private readonly usersService: UserService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Use()
   async checkUserMiddleware(ctx: MainUpdateContext, next: () => Promise<void>) {
@@ -37,7 +43,10 @@ export class MainUpdate {
       JSON.stringify({ firstName, secondName, username }),
     );
 
-    let user = await this.usersService.getUserByTelegramId(ctx.chat.id);
+    let user = await this.usersService.getUser({
+      telegramId: ctx.chat.id,
+      withBalance: true,
+    });
 
     if (!user) {
       const languageCode = ctx.from.language_code === 'ru' ? 'ru' : 'en';
@@ -64,6 +73,19 @@ export class MainUpdate {
 
     if (user.isBlocked) {
       return;
+    }
+
+    try {
+      const payload = {
+        id: user.id,
+        telegramId: user.telegramId,
+      };
+
+      if (this.configService.get<CommonConfigs>('common').env === 'development') {
+        this.logger.log({ testData: true, payload, tempAccessToken: this.jwtService.sign(payload) });
+      }
+    } catch (error) {
+      this.logger.error(error);
     }
 
     return user;

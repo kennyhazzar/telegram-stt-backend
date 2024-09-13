@@ -67,9 +67,10 @@ export class AuthService {
     if (validateInitData.isValid) {
       const { user: telegramUser } = validateInitData;
 
-      let user = await this.usersService.getUserByTelegramId(
-        telegramUser.telegramId,
-      );
+      let user = await this.usersService.getUser({
+        telegramId: telegramUser.telegramId,
+        withBalance: true,
+      });
 
       if (!user) {
         try {
