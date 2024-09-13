@@ -6,3 +6,4 @@ export * from './jwt.config';
 export * from './file-interceptor.config';
 export * from './minio-storage.config';
 export * from './bull.config';
+export * from './telegraf.config';
