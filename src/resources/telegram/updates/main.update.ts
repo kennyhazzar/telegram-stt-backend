@@ -28,7 +28,7 @@ export class MainUpdate {
     if (ctx) {
       user = await this.checkUser(ctx);
       ctx.state.user = user;
-
+      
       await next();
 
       return;
@@ -48,6 +48,8 @@ export class MainUpdate {
       withBalance: true,
     });
 
+    console.log({ user });
+
     if (!user) {
       const languageCode = ctx.from.language_code === 'ru' ? 'ru' : 'en';
 
@@ -62,8 +64,10 @@ export class MainUpdate {
       });
     }
 
+    console.log({ 'user.md5': user.md5, md5 })
+
     if (user.md5 !== md5) {
-      await this.usersService.updateUser(user.id, {
+      await this.usersService.updateTelegramProfile(user, {
         firstName,
         secondName,
         username,
@@ -75,24 +79,24 @@ export class MainUpdate {
       return;
     }
 
-    try {
-      const payload = {
-        id: user.id,
-        telegramId: user.telegramId,
-      };
+    // try {
+    //   const payload = {
+    //     id: user.id,
+    //     telegramId: user.telegramId,
+    //   };
 
-      if (
-        this.configService.get<CommonConfigs>('common').env === 'development'
-      ) {
-        this.logger.log({
-          testData: true,
-          payload,
-          tempAccessToken: this.jwtService.sign(payload),
-        });
-      }
-    } catch (error) {
-      this.logger.error(error);
-    }
+    //   if (
+    //     this.configService.get<CommonConfigs>('common').env === 'development'
+    //   ) {
+    //     this.logger.log({
+    //       testData: true,
+    //       payload,
+    //       tempAccessToken: this.jwtService.sign(payload),
+    //     });
+    //   }
+    // } catch (error) {
+    //   this.logger.error(error);
+    // }
 
     return user;
   }

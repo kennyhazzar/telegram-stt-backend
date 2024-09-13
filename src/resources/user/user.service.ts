@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, UserSourceEnum } from './entities/user.entity';
 import { Balance } from '@resources/balance/entities/balance.entity';
 import { EntityService } from '@core/services';
 import { UserJwtPayload } from '@core/types';
+import { UpdateTelegramProfileDto } from './dto';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class UserService {
@@ -12,6 +14,7 @@ export class UserService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly entityService: EntityService,
+    @Inject('CACHE_MANAGER') private readonly cacheManager: Cache,
   ) {}
 
   async getUser({
@@ -31,7 +34,7 @@ export class UserService {
 
     const user = await this.entityService.findOne({
       repository: this.userRepository,
-      cacheValue: `user_${telegramId && userId}`,
+      cacheValue: `${telegramId || userId}`,
       queryBuilderAlias: 'user',
       queryBuilder: (qb) => {
         if (withBalance) {
@@ -76,6 +79,21 @@ export class UserService {
       payload: createUserDto,
       cacheValue: (user) => user.id,
     });
+  }
+
+  async updateTelegramProfile(
+    user: User,
+    newProfile: UpdateTelegramProfileDto,
+  ) {
+    const updatedUser = await this.userRepository.save({
+      ...user,
+      ...newProfile,
+    });
+
+    await Promise.allSettled([
+      this.cacheManager.del(`user_${updatedUser.telegramId}`),
+      this.cacheManager.del(`user_${updatedUser.id}`),
+    ]);
   }
 
   async updateUser(
