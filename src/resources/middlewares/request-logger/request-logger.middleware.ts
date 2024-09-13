@@ -12,38 +12,39 @@ export class RequestLoggerMiddleware implements NestMiddleware {
     try {
       const startTime = Date.now();
 
-    const log = await this.requestLogService.createPreliminaryLog({
-      method: req.method,
-      url: req.url,
-      statusCode: null, 
-      duration: null,
-      timestamp: new Date(),
-      userAgent: req.headers['user-agent'] || '',
-      ip: req.ip,
-    });
+      const log = await this.requestLogService.createPreliminaryLog({
+        method: req.method,
+        url: req.originalUrl,
+        statusCode: null,
+        duration: null,
+        timestamp: new Date(),
+        userAgent: req.headers['user-agent'] || '',
+        ip: (req.headers['x-real-ip'] as string) || req.ip,
+        body: req?.body,
+      });
 
-    res.setHeader('x-request-id', log.id);
+      res.setHeader('x-request-id', log.id);
 
-    res.on('finish', async () => {
-      const endTime = Date.now();
-      const duration = endTime - startTime;
+      res.on('finish', async () => {
+        const endTime = Date.now();
+        const duration = endTime - startTime;
 
-      setImmediate(async () => {
-        await this.requestLogService.updateLog(log.id, {
-          statusCode: res.statusCode,
-          duration,
+        setImmediate(async () => {
+          await this.requestLogService.updateLog(log.id, {
+            statusCode: res.statusCode,
+            duration,
+          });
         });
       });
-    });
 
-    res.on('error', async (error) => {
-      setImmediate(async () => {
-        await this.requestLogService.updateLog(log.id, {
-          statusCode: res.statusCode,
-          errorMessage: error.message,
+      res.on('error', async (error) => {
+        setImmediate(async () => {
+          await this.requestLogService.updateLog(log.id, {
+            statusCode: res.statusCode,
+            errorMessage: error.message,
+          });
         });
       });
-    });
     } catch (error) {
       this.logger.error(error);
     }

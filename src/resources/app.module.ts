@@ -16,7 +16,10 @@ import { TranscriptionModule } from './transcription/transcription.module';
 import { UserModule } from './user/user.module';
 import { TariffModule } from './tariff/tariff.module';
 import { BullModule } from '@nestjs/bull';
-import { RequestLoggerMiddleware, RequestLogService } from '@resources/middlewares';
+import {
+  RequestLoggerMiddleware,
+  RequestLogService,
+} from '@resources/middlewares';
 import { RequestLog } from './middlewares/request-logger/entities';
 import { APP_FILTER } from '@nestjs/core';
 
@@ -33,7 +36,7 @@ import { APP_FILTER } from '@nestjs/core';
     TranscriptionModule,
     UserModule,
     TariffModule,
-    TypeOrmModule.forFeature([RequestLog])
+    TypeOrmModule.forFeature([RequestLog]),
   ],
   providers: [RequestLogService],
 })

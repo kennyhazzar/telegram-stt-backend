@@ -1,8 +1,4 @@
-import {
-  Entity,
-  Column,
-  CreateDateColumn,
-} from 'typeorm';
+import { Entity, Column, CreateDateColumn } from 'typeorm';
 import { PrimaryUuidBaseEntity } from '@core/db';
 
 @Entity()

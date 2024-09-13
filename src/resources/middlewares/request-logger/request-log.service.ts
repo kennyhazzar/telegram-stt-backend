@@ -10,7 +10,9 @@ export class RequestLogService {
     private requestLogRepository: Repository<RequestLog>,
   ) {}
 
-  async createPreliminaryLog(logData: Partial<RequestLog>): Promise<RequestLog> {
+  async createPreliminaryLog(
+    logData: Partial<RequestLog>,
+  ): Promise<RequestLog> {
     const log = this.requestLogRepository.create(logData);
     return this.requestLogRepository.save(log);
   }
