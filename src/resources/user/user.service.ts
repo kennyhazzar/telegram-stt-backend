@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from './entities/user.entity';
+import { User, UserSourceEnum } from './entities/user.entity';
 import { Balance } from '@resources/balance/entities/balance.entity';
 import { EntityService } from '@core/services';
 import { UserJwtPayload } from '@core/types';
@@ -55,6 +55,9 @@ export class UserService {
     username: string;
     firstName: string;
     secondName?: string;
+    languageCode?: string;
+    md5?: string;
+    source?: UserSourceEnum,
   }): Promise<User> {
     return this.entityService.save<User>({
       repository: this.userRepository,

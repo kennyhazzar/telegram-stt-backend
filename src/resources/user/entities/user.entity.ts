@@ -4,6 +4,11 @@ import { Balance } from '@resources/balance/entities/balance.entity';
 import { Task } from '@resources/tasks/entities/task.entity';
 import { Download } from '../../download/entities';
 
+export enum UserSourceEnum {
+  WEB_APP = 'webapp',
+  BOT = 'bot',
+}
+
 @Entity('users')
 export class User extends PrimaryUuidBaseEntity {
   @Column({ type: 'bigint', unique: true })
@@ -35,4 +40,22 @@ export class User extends PrimaryUuidBaseEntity {
     onDelete: 'SET NULL',
   })
   download: Download[];
+
+  @Column({
+    type: 'enum',
+    enum: UserSourceEnum,
+    default: UserSourceEnum.WEB_APP,
+    comment: 'Источник регистрации',
+  })
+  source: UserSourceEnum;
+
+  @Column({
+    default: 'en',
+  })
+  languageCode: string;
+
+  @Column({
+    default: false,
+  })
+  isBlocked: boolean;
 }

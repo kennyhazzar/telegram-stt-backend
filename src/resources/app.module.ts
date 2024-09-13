@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import {
   BullConfig,
   EnvConfig,
+  TelegrafConfig,
   ThrottlerConfig,
   TypeormConfig,
 } from '@core/configs';
@@ -21,7 +22,8 @@ import {
   RequestLogService,
 } from '@resources/middlewares';
 import { RequestLog } from './middlewares/request-logger/entities';
-import { APP_FILTER } from '@nestjs/core';
+import { TelegramModule } from './telegram/telegram.module';
+import { TelegrafModule } from 'nestjs-telegraf';
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import { APP_FILTER } from '@nestjs/core';
     TranscriptionModule,
     UserModule,
     TariffModule,
+    TelegrafModule.forRootAsync(TelegrafConfig),
+    TelegramModule,
     TypeOrmModule.forFeature([RequestLog]),
   ],
   providers: [RequestLogService],
