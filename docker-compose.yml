@@ -3,6 +3,7 @@ services:
     build: .
     ports:
       - ${PORT}:${PORT}
+    restart: always
     environment:
       - PORT=${PORT}
       - DB_TYPE=${DB_TYPE}
