@@ -6,11 +6,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { JwtConfig } from '@core/configs';
 
 @Module({
-  imports: [UserModule, ConfigModule,
-    JwtModule.registerAsync(JwtConfig),
-
-
-  ],
+  imports: [UserModule, ConfigModule, JwtModule.registerAsync(JwtConfig)],
   providers: [MainUpdate, StartUpdate],
 })
 export class TelegramModule {}

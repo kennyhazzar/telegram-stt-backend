@@ -81,8 +81,14 @@ export class MainUpdate {
         telegramId: user.telegramId,
       };
 
-      if (this.configService.get<CommonConfigs>('common').env === 'development') {
-        this.logger.log({ testData: true, payload, tempAccessToken: this.jwtService.sign(payload) });
+      if (
+        this.configService.get<CommonConfigs>('common').env === 'development'
+      ) {
+        this.logger.log({
+          testData: true,
+          payload,
+          tempAccessToken: this.jwtService.sign(payload),
+        });
       }
     } catch (error) {
       this.logger.error(error);
