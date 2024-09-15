@@ -28,7 +28,7 @@ export class MainUpdate {
     if (ctx) {
       user = await this.checkUser(ctx);
       ctx.state.user = user;
-      
+
       await next();
 
       return;
@@ -64,7 +64,7 @@ export class MainUpdate {
       });
     }
 
-    console.log({ 'user.md5': user.md5, md5 })
+    console.log({ 'user.md5': user.md5, md5 });
 
     if (user.md5 !== md5) {
       await this.usersService.updateTelegramProfile(user, {

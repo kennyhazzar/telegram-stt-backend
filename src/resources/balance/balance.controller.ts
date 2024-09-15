@@ -10,7 +10,9 @@ export class BalanceController {
 
   @Get('user')
   @UseGuards(ThrottlerBehindProxyGuard, AuthGuard)
-  async getTransactionsByUserId(@Req() request: UserRequestContext): Promise<Balance[]> {
+  async getTransactionsByUserId(
+    @Req() request: UserRequestContext,
+  ): Promise<Balance[]> {
     return this.balanceService.getTransactionsByUserId(request.user.id);
   }
 }

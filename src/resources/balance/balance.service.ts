@@ -27,7 +27,6 @@ export class BalanceService {
   async updateUserBalance(userId: string, amount: number): Promise<Balance> {
     const user = await this.usersService.getUser({
       userId,
-      errorHttp: true,
       withBalance: true,
     });
 
@@ -35,11 +34,15 @@ export class BalanceService {
       throw new NotFoundException('User not found');
     }
 
-    const balance = this.balanceRepository.create({
-      user,
-      amount,
+    const balance = await this.entityService.save({
+      repository: this.balanceRepository,
+      cacheValue: (balance) => balance.id,
+      payload: {
+        user,
+        amount,
+      },
     });
 
-    return this.balanceRepository.save(balance);
+    return balance;
   }
 }
