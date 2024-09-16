@@ -14,6 +14,12 @@ export class Payment extends PrimaryUuidBaseEntity {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   amount: number;
 
+  @Column({ nullable: true })
+  confirmationRedirect: string;
+
+  @Column({ nullable: true })
+  description: string;
+
   @Column({ type: 'enum', enum: PaymentType })
   type: PaymentType;
 

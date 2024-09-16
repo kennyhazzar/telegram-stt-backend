@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { BotConfigs, PaymentConfigs } from '@core/types';
+import { BotConfigs, PaymentConfigs, WebhookEvent } from '@core/types';
 import { HttpService } from '@nestjs/axios';
 import { randomUUID } from 'crypto';
 import { firstValueFrom } from 'rxjs';
@@ -22,6 +22,8 @@ import {
 import { Repository } from 'typeorm';
 import { InjectBot } from 'nestjs-telegraf';
 import { Context, Telegraf } from 'telegraf';
+import { User } from '../user';
+import { Update } from 'telegraf/typings/core/types/typegram';
 
 @Injectable()
 export class PaymentsService {
@@ -49,7 +51,10 @@ export class PaymentsService {
   async createTransaction(userId: string, value: number) {
     const idempotenceKey = randomUUID();
 
-    const {id: paymentId, user } = await this.createPaymentEntity(userId, value);
+    const { id: paymentId, user } = await this.createPaymentEntity(
+      userId,
+      value,
+    );
 
     try {
       const { data } = await firstValueFrom(
@@ -83,10 +88,6 @@ export class PaymentsService {
           },
         ),
       );
-
-      if (data.status === 'pending') {
-        await this.updatePaymentStatus(paymentId, PaymentStatusType.PENDING, user.id, user.telegramId);
-      }
 
       return {
         paymentId,
@@ -127,6 +128,7 @@ export class PaymentsService {
       repository: this.paymentStatusRepository,
       payload: {
         payment,
+        status: PaymentStatusType.PENDING,
       },
       bypassCache: true,
     });
@@ -137,7 +139,12 @@ export class PaymentsService {
     };
   }
 
-  async updatePaymentStatus(paymentId: string, status: PaymentStatusType, userId: string, telegramId: number) {
+  async updatePaymentStatus(
+    paymentId: string,
+    status: PaymentStatusType,
+    userId: string,
+    telegramId: number,
+  ) {
     try {
       await this.entityService.save({
         repository: this.paymentStatusRepository,
@@ -173,41 +180,91 @@ export class PaymentsService {
   async prepairWebhook(payload: Record<string, any>) {
     this.logger.log({ 'webhook.payload': payload });
 
-    if (payload?.event) {
-      const [event, type] = (payload?.event as string).split('.');
+    if (!payload?.event) return;
 
-      if (event === 'payment') {
-        const paymentId = payload?.object?.metadata?.paymentId;
-        const userId = payload?.object?.metadata?.userId;
+    const webhookEvent = payload?.event as WebhookEvent;
 
-        const payment = await this.getPaymentById(paymentId);
+    const paymentId = payload?.object?.metadata?.paymentId;
+    const userId = payload?.object?.metadata?.userId;
 
-        this.logger.log({ payment });
+    if (!paymentId || !userId) {
+      this.logger.warn('Missing paymentId or userId');
+      return;
+    }
 
-        if (type === 'succeeded') {
-          const user = await this.usersService.getUser({
-            userId,
-            withBalance: true,
-          });
+    const payment = await this.getPaymentById(paymentId);
+    if (!payment) {
+      this.logger.warn('Payment not found');
+      return;
+    }
 
-          this.logger.log({ user });
-          
-          await this.balanceService.updateUserBalance(
-            userId,
-            +user.balance.amount + +payment.amount,
-          );
+    const user = await this.usersService.getUser({
+      userId,
+      withBalance: true,
+    });
+    if (!user) {
+      this.logger.warn('User not found');
+      return;
+    }
 
-          await this.updatePaymentStatus(paymentId, PaymentStatusType.ADDED, user.id, user.telegramId);
-
-          try {
-            await this.bot.telegram.sendMessage(
+    switch (webhookEvent) {
+      case WebhookEvent.PaymentSucceeded:
+        await this.handlePayment(user, payment, {
+          success: true,
+          telegramCallback: async (bot) => {
+            await bot.telegram.sendMessage(
               user.telegramId,
-              `Поступили средста в размере ${payment.amount} рублей!`,
+              `Поступили средства в размере ${payment.amount} рублей! \n\n(paymentId: ${payment.id})`,
             );
-          } catch (error) {
-            console.log(error);
-          }
-        }
+          },
+        });
+        break;
+
+      case WebhookEvent.PaymentCanceled:
+        await this.handlePayment(user, payment, {
+          telegramCallback: async (bot) => {
+            await bot.telegram.sendMessage(
+              user.telegramId,
+              `Платеж "${payment.description}" был отклонен`,
+            );
+          },
+        });
+        break;
+
+      default:
+        this.logger.warn(`Unhandled event: ${webhookEvent}`);
+    }
+  }
+
+  private async handlePayment(
+    user: User,
+    payment: Payment,
+    options?: {
+      success?: boolean;
+      telegramCallback?: (bot: Telegraf<Context<Update>>) => Promise<void>;
+    },
+  ) {
+    await this.balanceService.updateUserBalance(
+      user.id,
+      +user.balance.amount + +payment.amount,
+    );
+
+    const { success, telegramCallback } = options;
+
+    if (success) {
+      await this.updatePaymentStatus(
+        payment.id,
+        PaymentStatusType.ADDED,
+        user.id,
+        user.telegramId,
+      );
+    }
+
+    if (telegramCallback) {
+      try {
+        await telegramCallback(this.bot);
+      } catch (error) {
+        this.logger.error('Error sending message to user', error);
       }
     }
   }

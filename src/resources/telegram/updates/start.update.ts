@@ -5,9 +5,7 @@ import { PaymentStatusType } from '@resources/payments/entities';
 
 @Update()
 export class StartUpdate {
-  constructor(
-    private readonly paymentService: PaymentsService,
-  ) {}
+  constructor(private readonly paymentService: PaymentsService) {}
 
   @Start()
   async start(ctx: MainUpdateContext) {
@@ -47,10 +45,17 @@ export class StartUpdate {
 
   @Command('pay')
   async pay(ctx: MainUpdateContext) {
-    const { state: { user: { id: userId } } } = ctx;
+    const {
+      state: {
+        user: { id: userId },
+      },
+    } = ctx;
 
     try {
-      const data = await this.paymentService.createTransaction(userId, (ctx as any)?.payload);
+      const data = await this.paymentService.createTransaction(
+        userId,
+        (ctx as any)?.payload,
+      );
 
       await ctx.reply(JSON.stringify(data));
     } catch (error) {
