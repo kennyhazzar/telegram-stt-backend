@@ -187,9 +187,8 @@ export class PaymentsService {
         if (type === 'succeeded') {
           const user = await this.usersService.getUser({
             userId,
+            withBalance: true,
           });
-
-          this.logger.log({ user });
           
           await this.balanceService.updateUserBalance(
             userId,
