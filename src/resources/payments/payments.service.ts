@@ -49,7 +49,7 @@ export class PaymentsService {
   async createTransaction(userId: string, value: number) {
     const idempotenceKey = randomUUID();
 
-    const paymentId = await this.createPaymentEntity(userId, value);
+    const {id: paymentId, user } = await this.createPaymentEntity(userId, value);
 
     try {
       const { data } = await firstValueFrom(
@@ -85,7 +85,7 @@ export class PaymentsService {
       );
 
       if (data.status === 'pending') {
-        await this.updatePaymentStatus(paymentId, PaymentStatusType.PENDING);
+        await this.updatePaymentStatus(paymentId, PaymentStatusType.PENDING, user.id, user.telegramId);
       }
 
       return {
@@ -131,10 +131,13 @@ export class PaymentsService {
       bypassCache: true,
     });
 
-    return payment.id;
+    return {
+      id: payment.id,
+      user,
+    };
   }
 
-  async updatePaymentStatus(paymentId: string, status: PaymentStatusType) {
+  async updatePaymentStatus(paymentId: string, status: PaymentStatusType, userId: string, telegramId: number) {
     try {
       await this.entityService.save({
         repository: this.paymentStatusRepository,
@@ -143,6 +146,10 @@ export class PaymentsService {
             id: paymentId,
           },
           status,
+        },
+        affectCache: async (cm) => {
+          await cm.del(`user_${userId}`);
+          await cm.del(`user_${telegramId}`);
         },
         bypassCache: true,
       });
@@ -175,17 +182,19 @@ export class PaymentsService {
 
         const payment = await this.getPaymentById(paymentId);
 
+        this.logger.log({ payment });
+
         if (type === 'succeeded') {
-          await this.balanceService.updateUserBalance(
-            userId,
-            payment.balance.amount + payment.amount,
-          );
-
-          await this.updatePaymentStatus(paymentId, PaymentStatusType.ADDED);
-
           const user = await this.usersService.getUser({
             userId,
           });
+          
+          await this.balanceService.updateUserBalance(
+            userId,
+            user.balance.amount + payment.amount,
+          );
+
+          await this.updatePaymentStatus(paymentId, PaymentStatusType.ADDED, user.id, user.telegramId);
 
           try {
             await this.bot.telegram.sendMessage(
