@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Get,
   HttpCode,
   HttpStatus,
   Post,
@@ -19,7 +18,7 @@ export class PaymentsController {
     return this.paymentsService.createTransaction(userId, amount);
   }
 
-  @Get('webhooks')
+  @Post('webhooks')
   @HttpCode(HttpStatus.OK)
   async prepairWebhook(@Body() payload: Record<string, any>) {
     return this.paymentsService.prepairWebhook(payload);
