@@ -24,6 +24,7 @@ import {
 import { RequestLog } from './middlewares/request-logger/entities';
 import { TelegramModule } from './telegram/telegram.module';
 import { TelegrafModule } from 'nestjs-telegraf';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { TelegrafModule } from 'nestjs-telegraf';
     TelegrafModule.forRootAsync(TelegrafConfig),
     TelegramModule,
     TypeOrmModule.forFeature([RequestLog]),
+    PaymentsModule,
   ],
   providers: [RequestLogService],
 })

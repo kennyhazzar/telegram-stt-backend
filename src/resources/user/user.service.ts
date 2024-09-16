@@ -7,14 +7,14 @@ import { EntityService } from '@core/services';
 import { UserJwtPayload } from '@core/types';
 import { UpdateTelegramProfileDto } from './dto';
 import { Cache } from 'cache-manager';
-import { BalanceService } from '@resources/balance/balance.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    @InjectRepository(Balance) private readonly balanceRepository: Repository<Balance>,
+    @InjectRepository(Balance)
+    private readonly balanceRepository: Repository<Balance>,
     private readonly entityService: EntityService,
     @Inject('CACHE_MANAGER') private readonly cacheManager: Cache,
   ) {}
@@ -48,9 +48,7 @@ export class UserService {
         }
 
         if (userId) {
-          return qb
-            .leftJoinAndSelect('user.balance', 'balance')
-            .andWhere('user.id = :userId', { userId });
+          return qb.andWhere('user.id = :userId', { userId });
         }
       },
     });
@@ -83,7 +81,7 @@ export class UserService {
         user,
       },
       bypassCache: true,
-    })
+    });
 
     return user;
   }

@@ -9,7 +9,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { CacheConfig, JwtConfig } from '@core/configs';
 import { RedisClientOptions } from 'redis';
 import { JwtModule } from '@nestjs/jwt';
-import { Payment, PaymentStatus } from './entities';
+import { Payment, PaymentStatus } from '../payments/entities';
 
 @Module({
   imports: [

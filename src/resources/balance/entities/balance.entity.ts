@@ -1,7 +1,7 @@
 import { Entity, Column, OneToMany, OneToOne, Index } from 'typeorm';
 import { PrimaryUuidBaseEntity } from '@core/db';
 import { User } from '@resources/user/entities/user.entity';
-import { Payment } from './payment.entity';
+import { Payment } from '@resources/payments/entities';
 
 @Entity('balance')
 @Index(['amount'])

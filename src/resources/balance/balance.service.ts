@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Balance } from './entities/balance.entity';
 import { EntityService } from '@core/services';
 import { UserService } from '../user/user.service';
-import { Payment } from './entities';
+import { Payment } from '../payments/entities';
 
 @Injectable()
 export class BalanceService {
@@ -26,18 +26,8 @@ export class BalanceService {
         },
       },
       bypassCache: true,
-    })
+    });
   }
-
-  async createPayment() {
-
-  }
-
-  async updatePayment() {
-
-  }
-
-
 
   async getTransactionsByUserId(userId: string): Promise<Balance[]> {
     return this.entityService.findMany({
@@ -58,8 +48,6 @@ export class BalanceService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-
-    
 
     const balance = await this.entityService.save({
       repository: this.balanceRepository,

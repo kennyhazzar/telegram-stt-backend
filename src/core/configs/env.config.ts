@@ -4,6 +4,7 @@ import {
   BotConfigs,
   CommonConfigs,
   DatabaseConfigs,
+  PaymentConfigs,
   RedisConfigs,
   StorageConfigs,
   ThrottlerConfigs,
@@ -47,6 +48,13 @@ const storage = registerAs<StorageConfigs>('storage', () => ({
 
 const bot = registerAs<BotConfigs>('bot', () => ({
   token: process.env.BOT_TOKEN,
+  botUrl: process.env.BOT_URL,
+}));
+
+const payment = registerAs<PaymentConfigs>('payment', () => ({
+  accountId: +process.env.YOOMONEY_ACCOUNT_ID,
+  secretKey: process.env.YOOMONEY_SECRET_KEY,
+  apiUrl: process.env.YOOMONEY_API_URL,
 }));
 
 export const EnvConfig: ConfigModuleOptions = {
@@ -69,6 +77,10 @@ export const EnvConfig: ConfigModuleOptions = {
     STORAGE_SECRET_ACCESS_KEY: Joi.string().required(),
     STORAGE_S3_REGION: Joi.string().required(),
     BOT_TOKEN: Joi.string().required(),
+    BOT_URL: Joi.string().required(),
+    YOOMONEY_ACCOUNT_ID: Joi.number().required(),
+    YOOMONEY_SECRET_KEY: Joi.string().required(),
+    YOOMONEY_API_URL: Joi.string().required(),
   }),
-  load: [common, database, redis, throttler, storage, bot],
+  load: [common, database, redis, throttler, storage, bot, payment],
 };

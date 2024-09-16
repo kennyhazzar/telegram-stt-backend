@@ -36,4 +36,11 @@ export class StorageConfigs {
 
 export class BotConfigs {
   token: string;
+  botUrl: string;
+}
+
+export class PaymentConfigs {
+  accountId: number;
+  secretKey: string;
+  apiUrl: string;
 }
