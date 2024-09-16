@@ -194,7 +194,7 @@ export class PaymentsService {
           
           await this.balanceService.updateUserBalance(
             userId,
-            user.balance.amount + payment.amount,
+            +user.balance.amount + +payment.amount,
           );
 
           await this.updatePaymentStatus(paymentId, PaymentStatusType.ADDED, user.id, user.telegramId);
