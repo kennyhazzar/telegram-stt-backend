@@ -189,6 +189,8 @@ export class PaymentsService {
             userId,
             withBalance: true,
           });
+
+          this.logger.log({ user });
           
           await this.balanceService.updateUserBalance(
             userId,
