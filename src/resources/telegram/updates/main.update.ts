@@ -48,8 +48,6 @@ export class MainUpdate {
       withBalance: true,
     });
 
-    console.log({ user });
-
     if (!user) {
       const languageCode = ctx.from.language_code === 'ru' ? 'ru' : 'en';
 
@@ -63,8 +61,6 @@ export class MainUpdate {
         source: UserSourceEnum.BOT,
       });
     }
-
-    console.log({ 'user.md5': user.md5, md5 });
 
     if (user.md5 !== md5) {
       await this.usersService.updateTelegramProfile(user, {

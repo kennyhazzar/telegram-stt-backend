@@ -7,12 +7,14 @@ import { EntityService } from '@core/services';
 import { UserJwtPayload } from '@core/types';
 import { UpdateTelegramProfileDto } from './dto';
 import { Cache } from 'cache-manager';
+import { BalanceService } from '@resources/balance/balance.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Balance) private readonly balanceRepository: Repository<Balance>,
     private readonly entityService: EntityService,
     @Inject('CACHE_MANAGER') private readonly cacheManager: Cache,
   ) {}
@@ -38,12 +40,7 @@ export class UserService {
       queryBuilderAlias: 'user',
       queryBuilder: (qb) => {
         if (withBalance) {
-          qb.addSelect((subQuery) => {
-            return subQuery
-              .select('SUM(balance.amount)', 'totalAmount')
-              .from(Balance, 'balance')
-              .where('balance.userId = user.id');
-          }, 'totalAmount');
+          qb.leftJoinAndSelect('user.balance', 'balance');
         }
 
         if (telegramId) {
@@ -65,7 +62,7 @@ export class UserService {
     return user;
   }
 
-  async createUser(createUserDto: {
+  async createUser(payload: {
     telegramId: number;
     username: string;
     firstName: string;
@@ -74,11 +71,21 @@ export class UserService {
     md5?: string;
     source?: UserSourceEnum;
   }): Promise<User> {
-    return this.entityService.save<User>({
+    const user = await this.entityService.save<User>({
       repository: this.userRepository,
-      payload: createUserDto,
+      payload,
       cacheValue: (user) => user.id,
     });
+
+    await this.entityService.save<Balance>({
+      repository: this.balanceRepository,
+      payload: {
+        user,
+      },
+      bypassCache: true,
+    })
+
+    return user;
   }
 
   async updateTelegramProfile(

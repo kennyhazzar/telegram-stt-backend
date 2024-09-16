@@ -4,20 +4,45 @@ import { Repository } from 'typeorm';
 import { Balance } from './entities/balance.entity';
 import { EntityService } from '@core/services';
 import { UserService } from '../user/user.service';
+import { Payment } from './entities';
 
 @Injectable()
 export class BalanceService {
   constructor(
     @InjectRepository(Balance)
     private readonly balanceRepository: Repository<Balance>,
+    @InjectRepository(Payment)
+    private readonly paymentsRepository: Repository<Payment>,
     private readonly usersService: UserService,
     private readonly entityService: EntityService,
   ) {}
 
+  async createBalance(userId: string) {
+    return this.entityService.save({
+      repository: this.balanceRepository,
+      payload: {
+        user: {
+          id: userId,
+        },
+      },
+      bypassCache: true,
+    })
+  }
+
+  async createPayment() {
+
+  }
+
+  async updatePayment() {
+
+  }
+
+
+
   async getTransactionsByUserId(userId: string): Promise<Balance[]> {
     return this.entityService.findMany({
-      repository: this.balanceRepository,
-      where: { user: { id: userId } },
+      repository: this.paymentsRepository,
+      where: { balance: { user: { id: userId } } },
       order: { createdAt: 'DESC' },
       cacheValue: '',
       bypassCache: true,
@@ -33,6 +58,8 @@ export class BalanceService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
+
+    
 
     const balance = await this.entityService.save({
       repository: this.balanceRepository,

@@ -6,7 +6,7 @@ import { Payment } from './payment.entity';
 @Entity('balance')
 @Index(['amount'])
 export class Balance extends PrimaryUuidBaseEntity {
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   amount: number;
 
   @OneToOne(() => User, (user) => user.balance)
