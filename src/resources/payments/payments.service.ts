@@ -188,6 +188,8 @@ export class PaymentsService {
           const user = await this.usersService.getUser({
             userId,
           });
+
+          this.logger.log({ user });
           
           await this.balanceService.updateUserBalance(
             userId,
