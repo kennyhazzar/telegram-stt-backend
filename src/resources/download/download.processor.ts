@@ -321,6 +321,7 @@ export class DownloadConsumer {
     if (totalCost > user.balance.amount) {
       await this.downloadService.updateDownload(downloadId, {
         status: DownloadStatusEnum.REJECTED,
+        duration,
         error: `Не хватает ${totalCost - user.balance.amount} рублей для оплаты. Стоимость - ${totalCost} рублей\nБаланс - ${user.balance.amount}`,
       });
 
