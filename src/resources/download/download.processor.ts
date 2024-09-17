@@ -267,7 +267,6 @@ export class DownloadConsumer {
           'Content-Type': mimetype,
           duration,
         };
-
         await this.minioService.client.putObject(
           bucketName,
           filename,
@@ -275,7 +274,6 @@ export class DownloadConsumer {
           Buffer.byteLength(file),
           metaData,
         );
-
         await this.downloadService.updateDownload(downloadId, {
           filename,
           status: DownloadStatusEnum.DONE,

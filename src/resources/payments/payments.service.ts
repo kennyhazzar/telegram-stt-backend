@@ -51,7 +51,10 @@ export class PaymentsService {
   async createTransaction(userId: string, value: number) {
     const idempotenceKey = randomUUID();
 
-    const { id: paymentId } = await this.createPaymentEntity(userId, value);
+    const { id: paymentId } = await this.createPaymentEntity(
+      userId,
+      value,
+    );
 
     try {
       const { data } = await firstValueFrom(

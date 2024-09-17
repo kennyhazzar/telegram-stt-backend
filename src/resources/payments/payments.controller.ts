@@ -20,7 +20,7 @@ export class PaymentsController {
   @UseGuards(ThrottlerBehindProxyGuard, AuthGuard)
   async createPayment(
     @Req() request: UserRequestContext,
-    @Body() { amount }: { amount: number },
+    @Body() { amount }: { amount: number; },
   ) {
     return this.paymentsService.createTransaction(request.user.id, amount);
   }
