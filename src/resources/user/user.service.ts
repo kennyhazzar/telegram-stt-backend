@@ -72,7 +72,7 @@ export class UserService {
     const user = await this.entityService.save<User>({
       repository: this.userRepository,
       payload,
-      cacheValue: (user) => user.id,
+      bypassCache: true,
     });
 
     await this.entityService.save<Balance>({
@@ -80,7 +80,6 @@ export class UserService {
       payload: {
         user,
       },
-      bypassCache: true,
     });
 
     return user;

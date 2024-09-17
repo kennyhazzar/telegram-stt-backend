@@ -47,6 +47,7 @@ export interface SaveEntity<T> {
   cacheValue?: (entity: T) => string;
   bypassCache?: boolean;
   affectCache?: (cacheManager: Cache) => Promise<void>;
+  repositoryName?: string;
 }
 
 export interface UpdateEntity<T> {

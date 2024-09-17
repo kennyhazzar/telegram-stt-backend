@@ -256,14 +256,18 @@ export class DownloadConsumer {
 
       const duration = await getVideoDurationInSeconds(Readable.from(file));
 
-      const isPassedResult = await this.calculateCost(downloadId, duration, userId);
+      const isPassedResult = await this.calculateCost(
+        downloadId,
+        duration,
+        userId,
+      );
 
       if (isPassedResult.isPassed) {
         const metaData = {
           'Content-Type': mimetype,
           duration,
         };
-  
+
         await this.minioService.client.putObject(
           bucketName,
           filename,
@@ -271,7 +275,7 @@ export class DownloadConsumer {
           Buffer.byteLength(file),
           metaData,
         );
-  
+
         await this.downloadService.updateDownload(downloadId, {
           filename,
           status: DownloadStatusEnum.DONE,
@@ -307,9 +311,12 @@ export class DownloadConsumer {
     return decodedFilename;
   }
 
-  private async calculateCost(downloadId: string, duration: number, userId: string) {
+  private async calculateCost(
+    downloadId: string,
+    duration: number,
+    userId: string,
+  ) {
     const { pricePerMinute } = await this.tariffService.getTariff();
-
 
     const totalCost = duration * pricePerMinute;
 
@@ -328,12 +335,12 @@ export class DownloadConsumer {
       return {
         isPassed: false,
         totalCost,
-      }
+      };
     } else {
       return {
         isPassed: true,
         totalCost,
-      }
+      };
     }
   }
 }
