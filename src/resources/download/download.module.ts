@@ -12,10 +12,12 @@ import { RedisClientOptions } from 'redis';
 import { CacheModule } from '@nestjs/cache-manager';
 import { JwtModule } from '@nestjs/jwt';
 import { UserModule } from '@resources/user/user.module';
+import { TariffModule } from '../tariff/tariff.module';
 
 @Module({
   imports: [
     UserModule,
+    TariffModule,
     TypeOrmModule.forFeature([Download]),
     CacheModule.registerAsync<RedisClientOptions>(CacheConfig),
     BullModule.registerQueueAsync({ name: 'download_queue' }),

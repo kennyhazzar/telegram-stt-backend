@@ -2,37 +2,62 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Balance } from './entities/balance.entity';
-import { User } from '@resources/user/entities/user.entity';
+import { EntityService } from '@core/services';
+import { UserService } from '../user/user.service';
+import { Payment } from '../payments/entities';
 
 @Injectable()
 export class BalanceService {
   constructor(
     @InjectRepository(Balance)
     private readonly balanceRepository: Repository<Balance>,
-
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    @InjectRepository(Payment)
+    private readonly paymentsRepository: Repository<Payment>,
+    private readonly usersService: UserService,
+    private readonly entityService: EntityService,
   ) {}
 
+  async createBalance(userId: string) {
+    return this.entityService.save({
+      repository: this.balanceRepository,
+      payload: {
+        user: {
+          id: userId,
+        },
+      },
+      bypassCache: true,
+    });
+  }
+
   async getTransactionsByUserId(userId: string): Promise<Balance[]> {
-    return this.balanceRepository.find({
-      where: { user: { id: userId } },
+    return this.entityService.findMany({
+      repository: this.paymentsRepository,
+      where: { balance: { user: { id: userId } } },
       order: { createdAt: 'DESC' },
+      cacheValue: '',
+      bypassCache: true,
     });
   }
 
   async updateUserBalance(userId: string, amount: number): Promise<Balance> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
+    const user = await this.usersService.getUser({
+      userId,
+      withBalance: true,
+    });
 
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    const balance = this.balanceRepository.create({
-      user,
-      amount,
+    const balance = await this.entityService.save({
+      repository: this.balanceRepository,
+      cacheValue: (balance) => balance.id,
+      payload: {
+        user,
+        amount,
+      },
     });
 
-    return this.balanceRepository.save(balance);
+    return balance;
   }
 }

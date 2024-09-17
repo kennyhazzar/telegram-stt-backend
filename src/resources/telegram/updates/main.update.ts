@@ -63,7 +63,7 @@ export class MainUpdate {
     }
 
     if (user.md5 !== md5) {
-      await this.usersService.updateUser(user.id, {
+      await this.usersService.updateTelegramProfile(user, {
         firstName,
         secondName,
         username,

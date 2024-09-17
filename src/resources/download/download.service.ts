@@ -43,6 +43,7 @@ export class DownloadService {
           downloadId: download.id,
           fileId,
           url,
+          userId,
         });
       } else if (url.includes('yadi.sk') || url.includes('disk.yandex.ru')) {
         download = await this.updateDownload(download.id, {
@@ -61,6 +62,7 @@ export class DownloadService {
         await this.downloadQueue.add('ytdl_audio', {
           downloadId: download.id,
           url,
+          userId,
         });
       } else {
         await this.updateDownload(download.id, {
@@ -94,6 +96,7 @@ export class DownloadService {
     this.downloadQueue.add('upload_file', {
       ...payload,
       downloadId: download.id,
+      userId,
     });
 
     return download;

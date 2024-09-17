@@ -6,4 +6,5 @@ export class JobDownload {
   filename?: string;
   mimetype?: string;
   title?: string;
+  userId?: string;
 }

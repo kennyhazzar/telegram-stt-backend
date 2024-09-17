@@ -13,6 +13,9 @@ import { DownloadService } from './download.service';
 import { Job } from 'bull';
 import { DownloadStatusEnum } from './entities';
 import { Cache } from 'cache-manager';
+import { User } from '../user';
+import { TariffService } from '../tariff/tariff.service';
+import { UserService } from '../user/user.service';
 
 @Processor('download_queue')
 export class DownloadConsumer {
@@ -23,12 +26,14 @@ export class DownloadConsumer {
     private readonly minioService: MinioService,
     private readonly configService: ConfigService,
     private readonly downloadService: DownloadService,
+    private readonly tariffService: TariffService,
+    private readonly usersService: UserService,
     @Inject('CACHE_MANAGER') private readonly cacheManager: Cache,
   ) {}
 
   @Process('ytdl_audio')
   async downloadFromYoutubeAsAudio(job: Job<JobDownload>): Promise<any> {
-    const { downloadId, url } = job.data;
+    const { downloadId, url, userId } = job.data;
 
     try {
       const videoId = ytdl.getVideoID(url);
@@ -61,7 +66,7 @@ export class DownloadConsumer {
         );
 
         const filename = `${randomUUID()}.mp3`;
-        return this.uploadToS3(buffer, filename, mimeType, downloadId);
+        return this.uploadToS3(buffer, filename, mimeType, downloadId, userId);
       } else {
         throw new BadRequestException('Error fetch file as buffer');
       }
@@ -81,7 +86,7 @@ export class DownloadConsumer {
 
   @Process('google_drive')
   async downloadFromGoogleDrive(job: Job<JobDownload>) {
-    const { downloadId, fileId } = job.data;
+    const { downloadId, fileId, userId } = job.data;
 
     const { mimeType, buffer, title } =
       await this.validateGoogleDriveFile(fileId);
@@ -98,6 +103,7 @@ export class DownloadConsumer {
         `${randomUUID()}.${FileMimeType[mimeType]}`,
         mimeType,
         downloadId,
+        userId,
       );
     } catch (error) {
       this.logger.error(error);
@@ -223,7 +229,7 @@ export class DownloadConsumer {
 
   @Process('upload_file')
   async uploadFile(payload: Job<JobDownload>) {
-    const { buffer, mimetype, downloadId } = payload.data;
+    const { buffer, mimetype, downloadId, userId } = payload.data;
 
     await this.downloadService.updateDownload(downloadId, {
       status: DownloadStatusEnum.PROCESSING,
@@ -234,6 +240,7 @@ export class DownloadConsumer {
       `${randomUUID()}.${FileMimeType[mimetype]}`,
       mimetype,
       downloadId,
+      userId,
     );
   }
 
@@ -242,35 +249,40 @@ export class DownloadConsumer {
     filename: string,
     mimetype: string,
     downloadId: string,
+    userId: string,
   ) {
     try {
       const { bucketName } = this.configService.get<StorageConfigs>('storage');
 
       const duration = await getVideoDurationInSeconds(Readable.from(file));
 
-      const metaData = {
-        'Content-Type': mimetype,
-        duration,
-      };
+      const isPassedResult = await this.calculateCost(downloadId, duration, userId);
 
-      await this.minioService.client.putObject(
-        bucketName,
-        filename,
-        file,
-        Buffer.byteLength(file),
-        metaData,
-      );
-
-      await this.downloadService.updateDownload(downloadId, {
-        filename,
-        status: DownloadStatusEnum.DONE,
-        duration,
-      });
-      return {
-        filename,
-        duration,
-        message: 'File uploaded successfully',
-      };
+      if (isPassedResult.isPassed) {
+        const metaData = {
+          'Content-Type': mimetype,
+          duration,
+        };
+  
+        await this.minioService.client.putObject(
+          bucketName,
+          filename,
+          file,
+          Buffer.byteLength(file),
+          metaData,
+        );
+  
+        await this.downloadService.updateDownload(downloadId, {
+          filename,
+          status: DownloadStatusEnum.DONE,
+          duration,
+        });
+        return {
+          filename,
+          duration,
+          message: 'File uploaded successfully',
+        };
+      }
     } catch (error) {
       this.logger.error(error);
 
@@ -293,5 +305,35 @@ export class DownloadConsumer {
     const decodedFilename = buffer.toString('utf-8');
 
     return decodedFilename;
+  }
+
+  private async calculateCost(downloadId: string, duration: number, userId: string) {
+    const { pricePerMinute } = await this.tariffService.getTariff();
+
+
+    const totalCost = duration * pricePerMinute;
+
+    const user = await this.usersService.getUser({
+      userId,
+      withBalance: true,
+    });
+
+    if (totalCost > user.balance.amount) {
+      await this.downloadService.updateDownload(downloadId, {
+        status: DownloadStatusEnum.REJECTED,
+        duration,
+        error: `Не хватает ${totalCost - user.balance.amount} рублей для оплаты. Стоимость - ${totalCost} рублей\nБаланс - ${user.balance.amount}`,
+      });
+
+      return {
+        isPassed: false,
+        totalCost,
+      }
+    } else {
+      return {
+        isPassed: true,
+        totalCost,
+      }
+    }
   }
 }
