@@ -24,7 +24,7 @@ export class IpWhitelistGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
-    const clientIp = request.ip;
+    const clientIp = (request.headers['x-real-ip'] as string) || request.ip;
 
     this.logger.log({ clientIp });
 
