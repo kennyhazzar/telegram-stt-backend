@@ -75,24 +75,24 @@ export class MainUpdate {
       return;
     }
 
-    // try {
-    //   const payload = {
-    //     id: user.id,
-    //     telegramId: user.telegramId,
-    //   };
+    try {
+      const payload = {
+        id: user.id,
+        telegramId: user.telegramId,
+      };
 
-    //   if (
-    //     this.configService.get<CommonConfigs>('common').env === 'development'
-    //   ) {
-    //     this.logger.log({
-    //       testData: true,
-    //       payload,
-    //       tempAccessToken: this.jwtService.sign(payload),
-    //     });
-    //   }
-    // } catch (error) {
-    //   this.logger.error(error);
-    // }
+      if (
+        this.configService.get<CommonConfigs>('common').env === 'development'
+      ) {
+        this.logger.log({
+          testData: true,
+          payload,
+          tempAccessToken: this.jwtService.sign(payload),
+        });
+      }
+    } catch (error) {
+      this.logger.error(error);
+    }
 
     return user;
   }

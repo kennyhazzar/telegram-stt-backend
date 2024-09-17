@@ -13,5 +13,6 @@ import { RedisClientOptions } from 'redis';
     TypeOrmModule.forFeature([Tariff]),
   ],
   providers: [TariffService, EntityService],
+  exports: [TariffService],
 })
 export class TariffModule {}
