@@ -51,7 +51,7 @@ export class PaymentsService {
   async createTransaction(userId: string, value: number) {
     const idempotenceKey = randomUUID();
 
-    const { id: paymentId, user } = await this.createPaymentEntity(
+    const { id: paymentId } = await this.createPaymentEntity(
       userId,
       value,
     );
@@ -225,7 +225,7 @@ export class PaymentsService {
           telegramCallback: async (bot) => {
             await bot.telegram.sendMessage(
               user.telegramId,
-              `Платеж "${payment.description}" был отклонен`,
+              `Платеж "${payment.description || ''}" был отклонен`,
             );
           },
         });

@@ -43,6 +43,7 @@ export class StartUpdate {
     }
   }
 
+  //TODO: Удалить позже
   @Command('pay')
   async pay(ctx: MainUpdateContext) {
     const {
