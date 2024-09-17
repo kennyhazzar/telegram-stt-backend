@@ -122,6 +122,7 @@ export class DownloadService {
         createdAt: true,
         updatedAt: true,
         error: true,
+        ttlExpiresAt: true,
       },
       transform: (dl) => ({
         id: dl.id,
@@ -133,6 +134,7 @@ export class DownloadService {
         createdAt: dl.createdAt,
         updatedAt: dl.updatedAt,
         error: dl.error,
+        ttlExpiresAt: dl.ttlExpiresAt,
       }),
     });
   }

@@ -154,7 +154,7 @@ export class EntityService {
         entities = await qb.getRawMany();
       } else {
         const options: FindManyOptions<T> = {
-          where: { ...where },
+          where,
           relations,
           select,
           order,

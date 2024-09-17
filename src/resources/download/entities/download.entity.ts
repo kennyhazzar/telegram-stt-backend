@@ -1,6 +1,7 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { BeforeInsert, BeforeUpdate, Column, Entity, ManyToOne } from 'typeorm';
 import { PrimaryUuidBaseEntity } from '@core/db';
 import { User } from '@resources/user';
+import { addHours } from 'date-fns';
 
 export enum DownloadSourceEnum {
   GOOGLE_DRIVE = 'google_drive',
@@ -13,6 +14,8 @@ export enum DownloadStatusEnum {
   CREATED = 'created',
   PROCESSING = 'processing',
   DONE = 'done',
+  EXPIRED = 'expired',
+  DONE_NOT_ENOUTH_FUNDS = 'done_not_enouth_funds',
   REJECTED = 'rejected',
   ERROR = 'error',
 }
@@ -53,9 +56,30 @@ export class Download extends PrimaryUuidBaseEntity {
   })
   duration?: number;
 
+  @Column({})
   @Column({ comment: 'Текст ошибки, если что-то пошло не так', nullable: true })
   error?: string;
 
   @ManyToOne(() => User, (user) => user.balance)
   user: User;
+
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+    comment: 'Время до удаления файла',
+  })
+  ttlExpiresAt?: Date;
+
+  @BeforeInsert()
+  @BeforeUpdate()
+  calculateTTL() {
+    const now = new Date();
+    if (this.status === DownloadStatusEnum.DONE) {
+      this.ttlExpiresAt = addHours(now, 24);
+    } else if (this.status === DownloadStatusEnum.DONE_NOT_ENOUTH_FUNDS) {
+      this.ttlExpiresAt = addHours(now, 6);
+    } else {
+      this.ttlExpiresAt = null;
+    }
+  }
 }

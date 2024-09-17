@@ -16,6 +16,8 @@ import { Cache } from 'cache-manager';
 import { User } from '../user';
 import { TariffService } from '../tariff/tariff.service';
 import { UserService } from '../user/user.service';
+import { UpdateDownloadDto } from './dto';
+import { DeepPartial } from 'typeorm';
 
 @Processor('download_queue')
 export class DownloadConsumer {
@@ -262,29 +264,38 @@ export class DownloadConsumer {
         userId,
       );
 
-      if (isPassedResult.isPassed) {
-        const metaData = {
-          'Content-Type': mimetype,
-          duration,
-        };
-        await this.minioService.client.putObject(
-          bucketName,
-          filename,
-          file,
-          Buffer.byteLength(file),
-          metaData,
-        );
-        await this.downloadService.updateDownload(downloadId, {
-          filename,
-          status: DownloadStatusEnum.DONE,
-          duration,
-        });
-        return {
-          filename,
-          duration,
-          message: 'File uploaded successfully',
-        };
+      const metaData = {
+        'Content-Type': mimetype,
+        duration,
+      };
+      await this.minioService.client.putObject(
+        bucketName,
+        filename,
+        file,
+        Buffer.byteLength(file),
+        metaData,
+      );
+
+      let payload: DeepPartial<UpdateDownloadDto> = {
+        filename,
+        status: isPassedResult?.isPassed
+          ? DownloadStatusEnum.DONE
+          : DownloadStatusEnum.DONE_NOT_ENOUTH_FUNDS,
+        duration,
+      };
+
+      if (!isPassedResult?.isPassed) {
+        payload = { ...payload, error: isPassedResult.error };
       }
+
+      await this.downloadService.updateDownload(downloadId, payload);
+
+      return {
+        filename,
+        duration,
+        price: isPassedResult.totalCost,
+        message: 'Файл успешно загружен',
+      };
     } catch (error) {
       this.logger.error(error);
 
@@ -324,15 +335,18 @@ export class DownloadConsumer {
     });
 
     if (totalCost > user.balance.amount) {
+      const error = `Не хватает ${totalCost - user.balance.amount} рублей для оплаты. Стоимость - ${totalCost} рублей\nБаланс - ${user.balance.amount}`;
+
       await this.downloadService.updateDownload(downloadId, {
         status: DownloadStatusEnum.REJECTED,
         duration,
-        error: `Не хватает ${totalCost - user.balance.amount} рублей для оплаты. Стоимость - ${totalCost} рублей\nБаланс - ${user.balance.amount}`,
+        error,
       });
 
       return {
         isPassed: false,
         totalCost,
+        error,
       };
     } else {
       return {
