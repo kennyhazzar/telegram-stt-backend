@@ -47,6 +47,7 @@ export interface SaveEntity<T> {
   cacheValue?: (entity: T) => string;
   bypassCache?: boolean;
   affectCache?: (cacheManager: Cache) => Promise<void>;
+  repositoryName?: string;
 }
 
 export interface UpdateEntity<T> {
@@ -153,7 +154,7 @@ export class EntityService {
         entities = await qb.getRawMany();
       } else {
         const options: FindManyOptions<T> = {
-          where: { ...where },
+          where,
           relations,
           select,
           order,

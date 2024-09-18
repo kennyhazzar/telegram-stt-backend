@@ -3,15 +3,12 @@ import {
   ExecutionContext,
   Injectable,
   ForbiddenException,
-  Logger,
 } from '@nestjs/common';
 import { Request } from 'express';
 import * as ipRangeCheck from 'ip-range-check';
 
 @Injectable()
 export class IpWhitelistGuard implements CanActivate {
-  private logger = new Logger(IpWhitelistGuard.name);
-
   private readonly trustedIps = [
     '185.71.76.0/27',
     '185.71.77.0/27',
@@ -25,8 +22,6 @@ export class IpWhitelistGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
     const clientIp = (request.headers['x-real-ip'] as string) || request.ip;
-
-    this.logger.log({ clientIp });
 
     const isTrusted = this.trustedIps.some((ip) => ipRangeCheck(clientIp, ip));
 

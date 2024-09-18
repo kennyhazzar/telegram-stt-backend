@@ -13,6 +13,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { JwtModule } from '@nestjs/jwt';
 import { UserModule } from '@resources/user/user.module';
 import { TariffModule } from '../tariff/tariff.module';
+import { DownloadCleanupService } from './download.clean-up.service';
 
 @Module({
   imports: [
@@ -24,7 +25,12 @@ import { TariffModule } from '../tariff/tariff.module';
     MinioModule.registerAsync(MinioModuleConfig),
     JwtModule.registerAsync(JwtConfig),
   ],
-  providers: [DownloadService, EntityService, DownloadConsumer],
+  providers: [
+    DownloadService,
+    EntityService,
+    DownloadConsumer,
+    DownloadCleanupService,
+  ],
   controllers: [DownloadController],
   exports: [DownloadService],
 })
