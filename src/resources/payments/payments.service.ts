@@ -91,8 +91,8 @@ export class PaymentsService {
 
       try {
         await this.updatePayment(paymentId, {
-          description,
-          confirmationRedirect,
+          description: data.description,
+          confirmationRedirect: data.confirmation,
         });
       } catch (error) {
         this.logger.error(error);
