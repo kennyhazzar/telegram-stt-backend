@@ -297,9 +297,7 @@ export class DownloadConsumer {
 
       let payload: DeepPartial<UpdateDownloadDto> = {
         filename,
-        status: isPassedResult?.isPassed
-          ? DownloadStatusEnum.DONE
-          : DownloadStatusEnum.DONE_NOT_ENOUTH_FUNDS,
+        status: DownloadStatusEnum.DONE,
         duration,
       };
 

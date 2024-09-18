@@ -35,7 +35,6 @@ export class DownloadCleanupService implements OnModuleInit {
     const now = new Date();
 
     const doneExpiration = subHours(now, 24);
-    const doneNotEnoughFundsExpiration = subHours(now, 6);
 
     const expiredDownloads = await this.entityService.findMany({
       repository: this.downloadRepository,
@@ -44,10 +43,6 @@ export class DownloadCleanupService implements OnModuleInit {
         {
           status: DownloadStatusEnum.DONE,
           updatedAt: LessThan(doneExpiration),
-        },
-        {
-          status: DownloadStatusEnum.DONE_NOT_ENOUTH_FUNDS,
-          updatedAt: LessThan(doneNotEnoughFundsExpiration),
         },
       ],
       bypassCache: true,

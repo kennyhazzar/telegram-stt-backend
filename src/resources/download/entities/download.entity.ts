@@ -15,7 +15,6 @@ export enum DownloadStatusEnum {
   PROCESSING = 'processing',
   DONE = 'done',
   EXPIRED = 'expired',
-  DONE_NOT_ENOUTH_FUNDS = 'done_not_enouth_funds',
   REJECTED = 'rejected',
   ERROR = 'error',
 }
@@ -76,8 +75,6 @@ export class Download extends PrimaryUuidBaseEntity {
     const now = new Date();
     if (this.status === DownloadStatusEnum.DONE) {
       this.ttlExpiresAt = addHours(now, 24);
-    } else if (this.status === DownloadStatusEnum.DONE_NOT_ENOUTH_FUNDS) {
-      this.ttlExpiresAt = addHours(now, 6);
     } else {
       this.ttlExpiresAt = null;
     }
