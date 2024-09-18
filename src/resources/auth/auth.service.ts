@@ -1,14 +1,12 @@
 import {
   BadRequestException,
   Injectable,
-  NotFoundException,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { BotConfigs, CommonConfigs } from '@core/types';
 import { UserService } from '../user/user.service';
-import { TelegramDataDto } from './dto';
 
 @Injectable()
 export class AuthService {
@@ -98,7 +96,7 @@ export class AuthService {
         access_token: this.jwtService.sign(payload),
       };
     } else {
-      throw new NotFoundException('Invalid creds');
+      throw new BadRequestException('Invalid creds');
     }
   }
 
