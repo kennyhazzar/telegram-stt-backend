@@ -51,7 +51,8 @@ export class DownloadCleanupService implements OnModuleInit {
     for (const download of expiredDownloads) {
       try {
         if (download.filename) {
-          const { bucketName } = this.configService.get<StorageConfigs>('storage');
+          const { bucketName } =
+            this.configService.get<StorageConfigs>('storage');
 
           await this.minioService.client.removeObject(
             bucketName,

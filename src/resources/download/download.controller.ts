@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { DownloadService } from './download.service';
 import { AuthGuard, ThrottlerBehindProxyGuard } from '@resources/auth/guards';
-import { UserRequestContext } from '@core/types';
+import { MessageDownloadEnum, UserRequestContext } from '@core/types';
 import { MinioFileInterceptor } from './download.interceptor';
 
 @Controller('download')
@@ -34,7 +34,7 @@ export class DownloadController {
 
       return {
         downloadId: file.destination,
-        message: 'Download was added to queue successfully',
+        message: MessageDownloadEnum.DOWNLOAD_ADDED_TO_QUEUE,
       };
     } catch (error) {
       this.logger.error(error);

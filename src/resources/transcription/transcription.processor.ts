@@ -25,31 +25,31 @@ export class TranscriptionProcessor {
   @Process()
   async handleTranscription(job: Job): Promise<void> {
     try {
-      const statusResponse = await lastValueFrom(
-        this.httpService.get(`${this.transcriptionServiceUrl}/status`),
-      );
+      // const statusResponse = await lastValueFrom(
+      //   this.httpService.get(`${this.transcriptionServiceUrl}/status`),
+      // );
 
-      if (statusResponse.data.status !== 'idle') {
-        return;
-      }
+      // if (statusResponse.data.status !== 'idle') {
+      //   return;
+      // }
 
-      const task = await this.taskRepository.findOne({
-        where: { status: 'created' },
-        order: { createdAt: 'ASC' },
-      });
+      // const task = await this.taskRepository.findOne({
+      //   where: { status: 'created' },
+      //   order: { createdAt: 'ASC' },
+      // });
 
-      if (!task) {
-        return;
-      }
+      // if (!task) {
+      //   return;
+      // }
 
-      const transcriptionResponse = await lastValueFrom(
-        this.httpService.post(`${this.transcriptionServiceUrl}/transcribe`, {
-          fileId: task.inputFileId,
-        }),
-      );
+      // const transcriptionResponse = await lastValueFrom(
+      //   this.httpService.post(`${this.transcriptionServiceUrl}/transcribe`, {
+      //     fileId: task.inputFileId,
+      //   }),
+      // );
 
-      task.status = 'processing';
-      await this.taskRepository.save(task);
+      // task.status = 'processing';
+      // await this.taskRepository.save(task);
     } catch (error) {
       console.error('Error processing transcription:', error);
     }

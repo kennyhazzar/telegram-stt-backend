@@ -7,17 +7,14 @@ import { Readable } from 'stream';
 import { randomUUID } from 'crypto';
 import { BadRequestException, Inject, Logger } from '@nestjs/common';
 import axios from 'axios';
-import * as path from 'path';
 import * as ytdl from '@distube/ytdl-core';
 import { DownloadService } from './download.service';
 import { Job } from 'bull';
 import { DownloadStatusEnum } from './entities';
 import { Cache } from 'cache-manager';
-import { User } from '../user';
-import { TariffService } from '../tariff/tariff.service';
-import { UserService } from '../user/user.service';
 import { UpdateDownloadDto } from './dto';
 import { DeepPartial } from 'typeorm';
+import { BalanceService } from '@resources/balance/balance.service';
 
 @Processor('download_queue')
 export class DownloadConsumer {
@@ -28,8 +25,7 @@ export class DownloadConsumer {
     private readonly minioService: MinioService,
     private readonly configService: ConfigService,
     private readonly downloadService: DownloadService,
-    private readonly tariffService: TariffService,
-    private readonly usersService: UserService,
+    private readonly balanceService: BalanceService,
     @Inject('CACHE_MANAGER') private readonly cacheManager: Cache,
   ) {}
 
@@ -90,8 +86,10 @@ export class DownloadConsumer {
   async downloadFromGoogleDrive(job: Job<JobDownload>) {
     const { downloadId, fileId, userId } = job.data;
 
-    const { mimeType, buffer, title } =
-      await this.validateCloudFile(fileId, 'google');
+    const { mimeType, buffer, title } = await this.validateCloudFile(
+      fileId,
+      'google',
+    );
 
     if (title) {
       await this.downloadService.updateDownload(downloadId, {
@@ -129,7 +127,6 @@ export class DownloadConsumer {
         fileUrl = fileId;
       }
 
-
       const response = await this.fetchFileAsBuffer(fileUrl);
 
       const validMimeTypes = [
@@ -166,7 +163,7 @@ export class DownloadConsumer {
   async downloadFromYandexDisk(job: Job<JobDownload>) {
     try {
       const { downloadId, url, userId } = job.data;
-      
+
       const getDownloadLinkUrl = `https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key=${encodeURIComponent(url)}`;
 
       const linkResponse = await axios.get(getDownloadLinkUrl);
@@ -178,15 +175,17 @@ export class DownloadConsumer {
         );
       }
 
-      const { mimeType, buffer, title } =
-        await this.validateCloudFile(url, 'yandex');
-  
+      const { mimeType, buffer, title } = await this.validateCloudFile(
+        url,
+        'yandex',
+      );
+
       if (title) {
         await this.downloadService.updateDownload(downloadId, {
           title,
         });
       }
-  
+
       try {
         return this.uploadToS3(
           buffer,
@@ -277,8 +276,7 @@ export class DownloadConsumer {
 
       const duration = await getVideoDurationInSeconds(Readable.from(file));
 
-      const isPassedResult = await this.calculateCost(
-        downloadId,
+      const isPassedResult = await this.balanceService.calculateCost(
         duration,
         userId,
       );
@@ -300,10 +298,6 @@ export class DownloadConsumer {
         status: DownloadStatusEnum.DONE,
         duration,
       };
-
-      if (!isPassedResult?.isPassed) {
-        payload = { ...payload, error: isPassedResult.error };
-      }
 
       await this.downloadService.updateDownload(downloadId, payload);
 
@@ -335,41 +329,5 @@ export class DownloadConsumer {
     const decodedFilename = buffer.toString('utf-8');
 
     return decodedFilename;
-  }
-
-  private async calculateCost(
-    downloadId: string,
-    duration: number,
-    userId: string,
-  ) {
-    const { pricePerMinute } = await this.tariffService.getTariff();
-
-    const totalCost = duration * pricePerMinute;
-
-    const user = await this.usersService.getUser({
-      userId,
-      withBalance: true,
-    });
-
-    if (totalCost > user.balance.amount) {
-      const error = `Не хватает ${totalCost - user.balance.amount} рублей для оплаты. Стоимость - ${totalCost} рублей\nБаланс - ${user.balance.amount}`;
-
-      await this.downloadService.updateDownload(downloadId, {
-        status: DownloadStatusEnum.REJECTED,
-        duration,
-        error,
-      });
-
-      return {
-        isPassed: false,
-        totalCost,
-        error,
-      };
-    } else {
-      return {
-        isPassed: true,
-        totalCost,
-      };
-    }
   }
 }

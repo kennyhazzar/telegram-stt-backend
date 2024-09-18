@@ -1,7 +1,15 @@
-import { BeforeInsert, BeforeUpdate, Column, Entity, ManyToOne } from 'typeorm';
+import {
+  BeforeInsert,
+  BeforeUpdate,
+  Column,
+  Entity,
+  ManyToOne,
+  OneToOne,
+} from 'typeorm';
 import { PrimaryUuidBaseEntity } from '@core/db';
 import { User } from '@resources/user';
 import { addHours } from 'date-fns';
+import { Task } from '@resources/tasks/entities/task.entity';
 
 export enum DownloadSourceEnum {
   GOOGLE_DRIVE = 'google_drive',
@@ -68,6 +76,18 @@ export class Download extends PrimaryUuidBaseEntity {
     comment: 'Время до удаления файла',
   })
   ttlExpiresAt?: Date;
+
+  @OneToOne(() => User, (user) => user.balance, {
+    nullable: true,
+    onDelete: 'CASCADE',
+  })
+  task?: Task;
+
+  @Column({
+    nullable: true,
+    comment: 'Сообщение с дополнительной информацией о скачивании',
+  })
+  message?: string;
 
   @BeforeInsert()
   @BeforeUpdate()

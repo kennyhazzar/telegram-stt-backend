@@ -1,44 +1,93 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Task } from './entities/task.entity';
-import { User } from '@resources/user/entities/user.entity';
+import { EntityService } from '@core/services';
+import { UserService } from '../user/user.service';
+import { DownloadService } from '../download/download.service';
+import { DownloadStatusEnum } from '../download/entities';
+import { BalanceService } from '../balance/balance.service';
+import { PaymentsService } from '../payments/payments.service';
+import { PaymentType } from '../payments/entities';
 
 @Injectable()
 export class TaskService {
+  private logger = new Logger(TaskService.name);
+
   constructor(
     @InjectRepository(Task)
     private readonly taskRepository: Repository<Task>,
-
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    private readonly entityService: EntityService,
+    private readonly usersService: UserService,
+    private readonly downloadsService: DownloadService,
+    private readonly balanceService: BalanceService,
+    private readonly paymentsService: PaymentsService,
   ) {}
 
-  // Создание новой задачи
-  async createTask(createTaskDto: {
-    status: 'created' | 'processing' | 'done' | 'rejected' | 'error';
-    inputFileId: string;
-    outputFileId?: string;
-    duration?: number;
-    userId: string; // Добавлен userId
-  }): Promise<Task> {
-    const user = await this.userRepository.findOne({
-      where: { id: createTaskDto.userId },
+  async createTask(userId: string, downloadId: string) {
+    const user = await this.usersService.getUser({
+      userId,
+      withBalance: true,
+    }); 
+
+    const download = await this.downloadsService.getDownload({
+      id: downloadId,
+      userId,
+      status: DownloadStatusEnum.DONE,
     });
 
-    if (!user) {
-      throw new NotFoundException('User not found');
+    if (!download) {
+      throw new NotFoundException('Данной загрузки не существует!');
     }
 
-    const task = this.taskRepository.create({
-      ...createTaskDto,
-      user,
-    });
+    const cost = await this.balanceService.calculateCost(download.duration, userId);
 
-    return this.taskRepository.save(task);
+    if (!cost.isPassed) {
+      throw new BadRequestException(cost?.error || 'Непредвиденная ошибка расчета стоимости обработки');
+    }
+
+    const [, newBalance] = await Promise.allSettled([
+      this.paymentsService.createPaymentEntity(userId, cost.totalCost, PaymentType.WITHDRAWAL),
+      this.balanceService.updateUserBalance(userId, +user.balance.amount - cost.totalCost),
+    ]);
+
+    let newBalanceAmount: number
+
+    if (newBalance.status === 'fulfilled') {
+      newBalanceAmount = newBalance.value.amount;
+    }
+
+    try {
+      const task = await this.entityService.save({
+        repository: this.taskRepository,
+        payload: {
+          download,
+          user: {
+            id: userId,
+          },
+          totalCost: cost.totalCost,
+        },
+        bypassCache: true,
+      });
+
+      return {
+        taskId: task.id,
+        newBalance: newBalanceAmount,
+      };
+    } catch (error) {
+      this.logger.error(error);
+      console.log(error);
+
+      throw new InternalServerErrorException('Ошибка при создании задачи');
+    }
   }
 
-  // Обновление задачи
   async updateTask(
     taskId: string,
     updateTaskDto: Partial<Task>,
@@ -68,15 +117,16 @@ export class TaskService {
   }
 
   async getTasksByUserId(userId: string): Promise<Task[]> {
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-      relations: ['tasks'],
+    return this.entityService.findMany({
+      repository: this.taskRepository,
+      where: {
+        user: {
+          id: userId,
+        },
+      },
+      order: { createdAt: 'DESC' },
+      cacheValue: '',
+      bypassCache: true,
     });
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    return user.tasks;
   }
 }

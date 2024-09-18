@@ -8,3 +8,7 @@ export class JobDownload {
   title?: string;
   userId?: string;
 }
+
+export enum MessageDownloadEnum {
+  DOWNLOAD_ADDED_TO_QUEUE = 'Загрузка успешно добавлена ​​в очередь',
+}
