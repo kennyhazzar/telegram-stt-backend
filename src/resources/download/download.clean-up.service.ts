@@ -7,7 +7,7 @@ import { DownloadService } from './download.service';
 import { EntityService } from '@core/services';
 import { Download, DownloadStatusEnum } from './entities';
 import { InjectRepository } from '@nestjs/typeorm';
-import { StorageConfigs } from '@core/types';
+import { MessageDownloadEnum, StorageConfigs } from '@core/types';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -66,7 +66,7 @@ export class DownloadCleanupService implements OnModuleInit {
 
         await this.downloadService.updateDownload(download.id, {
           status: DownloadStatusEnum.EXPIRED,
-          error: 'Файл удален по истечению срока хранения',
+          message: MessageDownloadEnum.DOWNLOAD_EXPIRED,
         });
       } catch (error) {
         this.logger.error(`Error deleting file ${download.filename}:`, error);

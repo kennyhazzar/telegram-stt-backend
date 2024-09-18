@@ -1,6 +1,6 @@
 import { PrimaryUuidBaseEntity } from '@core/db';
 import { User } from '@resources/user/entities/user.entity';
-import { Entity, Column, ManyToOne, OneToOne, Index } from 'typeorm';
+import { Entity, Column, ManyToOne, OneToOne, Index, JoinColumn } from 'typeorm';
 import { Download } from '@resources/download/entities';
 
 export enum TaskStatusEnum {
@@ -13,6 +13,7 @@ export enum TaskStatusEnum {
 
 @Entity('tasks')
 @Index(['status'])
+@Index(['message'])
 export class Task extends PrimaryUuidBaseEntity {
   @Column({
     type: 'enum',
@@ -27,7 +28,8 @@ export class Task extends PrimaryUuidBaseEntity {
   @Column({ default: 'Задача создана' })
   message: string;
 
-  @OneToOne(() => Download, { onDelete: 'CASCADE' })
+  @OneToOne(() => Download, { onDelete: 'CASCADE', nullable: true })
+  @JoinColumn()
   download: Download;
 
   @ManyToOne(() => User, (user) => user.balance)

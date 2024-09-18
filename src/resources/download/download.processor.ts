@@ -1,7 +1,7 @@
 import { Process, Processor } from '@nestjs/bull';
 import { ConfigService } from '@nestjs/config';
 import { MinioService } from 'nestjs-minio-client';
-import { FileMimeType, JobDownload, StorageConfigs } from '@core/types';
+import { FileMimeType, JobDownload, MessageDownloadEnum, StorageConfigs } from '@core/types';
 import getVideoDurationInSeconds from 'get-video-duration';
 import { Readable } from 'stream';
 import { randomUUID } from 'crypto';
@@ -73,11 +73,11 @@ export class DownloadConsumer {
         `Failed to download audio from YouTube: ${error.message}`,
       );
       await this.downloadService.updateDownload(downloadId, {
-        error: 'Error downloading and uploading audio from YouTube', //TODO: добавить сохранеие жзона
+        error: MessageDownloadEnum.DOWNLOAD_ERROR_UPLOAD_YOUTUBE, //TODO: добавить сохранеие жзона
         status: DownloadStatusEnum.ERROR,
       });
       throw new BadRequestException(
-        'Error downloading and uploading audio from YouTube',
+        MessageDownloadEnum.DOWNLOAD_ERROR_UPLOAD_YOUTUBE,
       );
     }
   }
@@ -108,11 +108,11 @@ export class DownloadConsumer {
     } catch (error) {
       this.logger.error(error);
       await this.downloadService.updateDownload(downloadId, {
-        error: 'Failed to download file from Google Drive', //TODO: добавить сохранеие жзона
+        error: MessageDownloadEnum.DOWNLOAD_ERROR_UPLOAD_GOOGLE_DRIVE, //TODO: добавить сохранеие жзона
         status: DownloadStatusEnum.ERROR,
       });
       throw new BadRequestException(
-        'Failed to download file from Google Drive',
+        MessageDownloadEnum.DOWNLOAD_ERROR_UPLOAD_GOOGLE_DRIVE,
       );
     }
   }
@@ -159,7 +159,8 @@ export class DownloadConsumer {
     }
   }
 
-  @Process('yandex_disk')
+  //TODO: до лучших времен
+  // @Process('yandex_disk')
   async downloadFromYandexDisk(job: Job<JobDownload>) {
     try {
       const { downloadId, url, userId } = job.data;
@@ -297,6 +298,7 @@ export class DownloadConsumer {
         filename,
         status: DownloadStatusEnum.DONE,
         duration,
+        message: MessageDownloadEnum.DOWNLOAD_DONE,
       };
 
       await this.downloadService.updateDownload(downloadId, payload);
@@ -312,7 +314,7 @@ export class DownloadConsumer {
 
       await this.downloadService.updateDownload(downloadId, {
         status: DownloadStatusEnum.ERROR,
-        error: 'Error Minio upload',
+        error: MessageDownloadEnum.DOWNLOAD_ERROR_UPLOAD_MINIO,
       });
     }
   }

@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Param, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Get, Param, Body, UseGuards, Req, NotFoundException } from '@nestjs/common';
 import { TaskService } from './task.service';
 import { AuthGuard, ThrottlerBehindProxyGuard } from '../auth/guards';
 import { UserRequestContext } from '@core/types';
@@ -19,7 +19,11 @@ export class TaskController {
   @Get(':taskId')
   @UseGuards(ThrottlerBehindProxyGuard, AuthGuard)
   async getTaskById(@Param('taskId') taskId: string) {
-    return this.taskService.getTaskById(taskId);
+    const task = await this.taskService.getTask({ taskId });
+
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
   }
 
   @Get('user/:userId')

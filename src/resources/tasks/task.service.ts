@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOptionsWhere, Repository } from 'typeorm';
 import { Task } from './entities/task.entity';
 import { EntityService } from '@core/services';
 import { UserService } from '../user/user.service';
@@ -46,6 +46,12 @@ export class TaskService {
       throw new NotFoundException('Данной загрузки не существует!');
     }
 
+    const existTask = await this.getTask({ downloadId });
+
+    if (existTask) {
+      throw new BadRequestException('Для этой загрузки уже была создана задача');
+    }
+
     const cost = await this.balanceService.calculateCost(download.duration, userId);
 
     if (!cost.isPassed) {
@@ -67,7 +73,9 @@ export class TaskService {
       const task = await this.entityService.save({
         repository: this.taskRepository,
         payload: {
-          download,
+          download: {
+            id: downloadId,
+          },
           user: {
             id: userId,
           },
@@ -104,14 +112,25 @@ export class TaskService {
     return this.taskRepository.save(task);
   }
 
-  async getTaskById(taskId: string): Promise<Task> {
-    const task = await this.taskRepository.findOne({
-      where: { id: taskId },
-    });
+  async getTask({ taskId, downloadId }: { taskId?: string; downloadId?: string }): Promise<Task> {
+    const where: FindOptionsWhere<Task> = {};
 
-    if (!task) {
-      throw new NotFoundException('Task not found');
+    if (taskId) {
+      where.id = taskId;
     }
+
+    if (downloadId) {
+      where.download = { id: downloadId };
+    }
+
+    const task = await this.entityService.findOne({
+      repository: this.taskRepository,
+      where: { id: taskId, download: { id: downloadId } },
+      bypassCache: true,
+      relations: {
+        download: true,
+      },
+    })
 
     return task;
   }

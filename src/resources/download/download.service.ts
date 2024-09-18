@@ -43,7 +43,7 @@ export class DownloadService {
         download = await this.updateDownload(download.id, {
           status: DownloadStatusEnum.PROCESSING,
           source: DownloadSourceEnum.GOOGLE_DRIVE,
-          message: 'Загрузка файла...',
+          message: MessageDownloadEnum.DOWNLOAD_PROCESSING,
         });
 
         await this.downloadQueue.add('google_drive', {
@@ -70,7 +70,7 @@ export class DownloadService {
         download = await this.updateDownload(download.id, {
           source: DownloadSourceEnum.YOUTUBE,
           status: DownloadStatusEnum.PROCESSING,
-          message: 'Загрузка файла...',
+          message: MessageDownloadEnum.DOWNLOAD_PROCESSING,
         });
 
         await this.downloadQueue.add('ytdl_audio', {
@@ -151,6 +151,7 @@ export class DownloadService {
         updatedAt: true,
         error: true,
         ttlExpiresAt: true,
+        message: true,
       },
       transform: (dl) => ({
         id: dl.id,
@@ -163,6 +164,7 @@ export class DownloadService {
         updatedAt: dl.updatedAt,
         error: dl.error,
         ttlExpiresAt: dl.ttlExpiresAt,
+        message: dl.message,
       }),
     });
   }
@@ -224,6 +226,7 @@ export class DownloadService {
         createdAt: true,
         updatedAt: true,
         error: true,
+        message: true,
       },
       order: {
         createdAt: 'desc',

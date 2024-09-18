@@ -3,6 +3,7 @@ import {
   BeforeUpdate,
   Column,
   Entity,
+  JoinColumn,
   ManyToOne,
   OneToOne,
 } from 'typeorm';
@@ -81,6 +82,7 @@ export class Download extends PrimaryUuidBaseEntity {
     nullable: true,
     onDelete: 'CASCADE',
   })
+  @JoinColumn()
   task?: Task;
 
   @Column({

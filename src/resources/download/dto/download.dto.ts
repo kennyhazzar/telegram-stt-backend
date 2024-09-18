@@ -19,4 +19,7 @@ export class UpdateDownloadDto {
   duration?: number;
   title?: string;
   message?: string;
+  task?: {
+    id: string;
+  }
 }
