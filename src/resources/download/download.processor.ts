@@ -91,7 +91,7 @@ export class DownloadConsumer {
     const { downloadId, fileId, userId } = job.data;
 
     const { mimeType, buffer, title } =
-      await this.validateGoogleDriveFile(fileId);
+      await this.validateCloudFile(fileId, 'google');
 
     if (title) {
       await this.downloadService.updateDownload(downloadId, {
@@ -119,9 +119,16 @@ export class DownloadConsumer {
     }
   }
 
-  async validateGoogleDriveFile(fileId: string) {
+  async validateCloudFile(fileId: string, type: 'google' | 'yandex') {
     try {
-      const fileUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+      let fileUrl: string = '';
+
+      if (type === 'google') {
+        fileUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+      } else if (type === 'yandex') {
+        fileUrl = fileId;
+      }
+
 
       const response = await this.fetchFileAsBuffer(fileUrl);
 
@@ -155,9 +162,12 @@ export class DownloadConsumer {
     }
   }
 
-  async downloadFromYandexDisk(publicUrl: string): Promise<string> {
+  @Process('yandex_disk')
+  async downloadFromYandexDisk(job: Job<JobDownload>) {
     try {
-      const getDownloadLinkUrl = `https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key=${encodeURIComponent(publicUrl)}`;
+      const { downloadId, url, userId } = job.data;
+      
+      const getDownloadLinkUrl = `https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key=${encodeURIComponent(url)}`;
 
       const linkResponse = await axios.get(getDownloadLinkUrl);
       const downloadLink = linkResponse.data.href;
@@ -168,24 +178,33 @@ export class DownloadConsumer {
         );
       }
 
-      const filePath = path.join(__dirname, 'temp', `${Date.now()}.file`);
-      const response = await axios({
-        url: downloadLink,
-        method: 'GET',
-        responseType: 'arraybuffer',
-      });
-
-      return 'string)';
-
-      // const writer = fs.createWriteStream(filePath);
-      // response.data.pipe(writer);
-
-      // await new Promise((resolve, reject) => {
-      //   writer.on('finish', resolve);
-      //   writer.on('error', reject);
-      // });
-
-      // return this.uploadToS3(filePath, `${Date.now()}.file`);
+      const { mimeType, buffer, title } =
+        await this.validateCloudFile(url, 'yandex');
+  
+      if (title) {
+        await this.downloadService.updateDownload(downloadId, {
+          title,
+        });
+      }
+  
+      try {
+        return this.uploadToS3(
+          buffer,
+          `${randomUUID()}.${FileMimeType[mimeType]}`,
+          mimeType,
+          downloadId,
+          userId,
+        );
+      } catch (error) {
+        this.logger.error(error);
+        await this.downloadService.updateDownload(downloadId, {
+          error: 'Failed to download file from Yandex Disk',
+          status: DownloadStatusEnum.ERROR,
+        });
+        throw new BadRequestException(
+          'Failed to download file from Yandex Disk',
+        );
+      }
     } catch (error) {
       throw new BadRequestException('Failed to download file from Yandex Disk');
     }

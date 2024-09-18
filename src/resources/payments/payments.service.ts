@@ -51,7 +51,10 @@ export class PaymentsService {
   async createTransaction(userId: string, value: number) {
     const idempotenceKey = randomUUID();
 
-    const { id: paymentId } = await this.createPaymentEntity(userId, value);
+    const { id: paymentId, user } = await this.createPaymentEntity(userId, value);
+
+    const confirmationRedirect = `${this.botUrl}?start=payment_${paymentId}`;
+    const description = `Платеж ${paymentId} на сумму ${value} рублей`;
 
     try {
       const { data } = await firstValueFrom(
@@ -65,9 +68,9 @@ export class PaymentsService {
             capture: true,
             confirmation: {
               type: 'redirect',
-              return_url: `${this.botUrl}?start=payment_${paymentId}`,
+              return_url: confirmationRedirect,
             },
-            description: `Платеж ${paymentId} на сумму ${value} рублей`,
+            description,
             metadata: {
               paymentId,
               userId,
@@ -86,6 +89,15 @@ export class PaymentsService {
         ),
       );
 
+      try {
+        await this.updatePayment(paymentId, {
+          description,
+          confirmationRedirect,
+        });
+      } catch (error) {
+        this.logger.error(error);
+      }
+
       return {
         paymentId,
         amount: value,
@@ -94,6 +106,8 @@ export class PaymentsService {
       };
     } catch (error) {
       this.logger.log(error);
+
+      await this.updatePaymentStatus(paymentId, PaymentStatusType.CANCELED, user.id, user.telegramId);
 
       throw new InternalServerErrorException();
     }
@@ -134,6 +148,22 @@ export class PaymentsService {
       id: payment.id,
       user,
     };
+  }
+
+  async updatePayment(paymentId: string, { description, confirmationRedirect }: { description: string; confirmationRedirect: string; }) {
+    const payload = await this.paymentRepository.preload({
+      id: paymentId,
+      ...{
+        description,
+        confirmationRedirect,
+      },
+    });
+
+    return this.entityService.update({
+      repository: this.paymentRepository,
+      payload,
+      bypassCache: true,
+    })
   }
 
   async updatePaymentStatus(

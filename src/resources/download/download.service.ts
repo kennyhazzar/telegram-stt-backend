@@ -47,12 +47,16 @@ export class DownloadService {
         });
       } else if (url.includes('yadi.sk') || url.includes('disk.yandex.ru')) {
         download = await this.updateDownload(download.id, {
-          status: DownloadStatusEnum.REJECTED,
           source: DownloadSourceEnum.YANDEX_DISK,
-          error: 'не сделал пока сори',
+          status: DownloadStatusEnum.PROCESSING,
+          url,
         });
 
-        //TODO: яндекс пока не реализован, не тестировал(
+        await this.downloadQueue.add('yandex_disk', {
+          downloadId: download.id,
+          url,
+          userId,
+        })
       } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
         download = await this.updateDownload(download.id, {
           source: DownloadSourceEnum.YOUTUBE,
