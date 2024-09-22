@@ -14,6 +14,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { UserModule } from '@resources/user/user.module';
 import { TariffModule } from '../tariff/tariff.module';
 import { DownloadCleanupService } from './download.clean-up.service';
+import { BalanceModule } from '../balance/balance.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { DownloadCleanupService } from './download.clean-up.service';
     BullModule.registerQueueAsync({ name: 'download_queue' }),
     MinioModule.registerAsync(MinioModuleConfig),
     JwtModule.registerAsync(JwtConfig),
+    BalanceModule,
   ],
   providers: [
     DownloadService,

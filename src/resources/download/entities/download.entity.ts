@@ -1,7 +1,16 @@
-import { BeforeInsert, BeforeUpdate, Column, Entity, ManyToOne } from 'typeorm';
+import {
+  BeforeInsert,
+  BeforeUpdate,
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToOne,
+} from 'typeorm';
 import { PrimaryUuidBaseEntity } from '@core/db';
 import { User } from '@resources/user';
 import { addHours } from 'date-fns';
+import { Task } from '@resources/tasks/entities/task.entity';
 
 export enum DownloadSourceEnum {
   GOOGLE_DRIVE = 'google_drive',
@@ -15,7 +24,6 @@ export enum DownloadStatusEnum {
   PROCESSING = 'processing',
   DONE = 'done',
   EXPIRED = 'expired',
-  DONE_NOT_ENOUTH_FUNDS = 'done_not_enouth_funds',
   REJECTED = 'rejected',
   ERROR = 'error',
 }
@@ -70,14 +78,25 @@ export class Download extends PrimaryUuidBaseEntity {
   })
   ttlExpiresAt?: Date;
 
+  @OneToOne(() => User, (user) => user.balance, {
+    nullable: true,
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn()
+  task?: Task;
+
+  @Column({
+    nullable: true,
+    comment: 'Сообщение с дополнительной информацией о скачивании',
+  })
+  message?: string;
+
   @BeforeInsert()
   @BeforeUpdate()
   calculateTTL() {
     const now = new Date();
     if (this.status === DownloadStatusEnum.DONE) {
       this.ttlExpiresAt = addHours(now, 24);
-    } else if (this.status === DownloadStatusEnum.DONE_NOT_ENOUTH_FUNDS) {
-      this.ttlExpiresAt = addHours(now, 6);
     } else {
       this.ttlExpiresAt = null;
     }

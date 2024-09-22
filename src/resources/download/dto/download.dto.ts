@@ -6,6 +6,7 @@ export class CreateDownloadDto {
   url: string;
   userId?: string;
   title?: string;
+  message?: string;
 }
 
 export class UpdateDownloadDto {
@@ -17,4 +18,8 @@ export class UpdateDownloadDto {
   url?: string;
   duration?: number;
   title?: string;
+  message?: string;
+  task?: {
+    id: string;
+  }
 }

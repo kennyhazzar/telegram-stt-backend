@@ -1,12 +1,17 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { EntityService } from '@core/services';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Download, DownloadSourceEnum, DownloadStatusEnum } from './entities';
-import { DeepPartial, Repository } from 'typeorm';
+import { DeepPartial, FindOptionsWhere, Repository } from 'typeorm';
 import { CreateDownloadDto, UpdateDownloadDto } from './dto';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
-import { JobDownload } from '@core/types';
+import { JobDownload, MessageDownloadEnum } from '@core/types';
 
 @Injectable()
 export class DownloadService {
@@ -27,6 +32,7 @@ export class DownloadService {
     let download = await this.createDownload({
       url,
       userId,
+      message: MessageDownloadEnum.DOWNLOAD_ADDED_TO_QUEUE,
     });
 
     try {
@@ -37,6 +43,7 @@ export class DownloadService {
         download = await this.updateDownload(download.id, {
           status: DownloadStatusEnum.PROCESSING,
           source: DownloadSourceEnum.GOOGLE_DRIVE,
+          message: MessageDownloadEnum.DOWNLOAD_PROCESSING,
         });
 
         await this.downloadQueue.add('google_drive', {
@@ -48,19 +55,22 @@ export class DownloadService {
       } else if (url.includes('yadi.sk') || url.includes('disk.yandex.ru')) {
         download = await this.updateDownload(download.id, {
           source: DownloadSourceEnum.YANDEX_DISK,
-          status: DownloadStatusEnum.PROCESSING,
+          status: DownloadStatusEnum.REJECTED,
+          message: 'Ошибка загрузки файла: Яндекс не поддерживается',
           url,
         });
 
-        await this.downloadQueue.add('yandex_disk', {
-          downloadId: download.id,
-          url,
-          userId,
-        })
+        //TODO: до лучших времен
+        // await this.downloadQueue.add('yandex_disk', {
+        //   downloadId: download.id,
+        //   url,
+        //   userId,
+        // });
       } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
         download = await this.updateDownload(download.id, {
           source: DownloadSourceEnum.YOUTUBE,
           status: DownloadStatusEnum.PROCESSING,
+          message: MessageDownloadEnum.DOWNLOAD_PROCESSING,
         });
 
         await this.downloadQueue.add('ytdl_audio', {
@@ -72,18 +82,21 @@ export class DownloadService {
         await this.updateDownload(download.id, {
           status: DownloadStatusEnum.ERROR,
           error: 'Unsupported URL',
+          message: 'Ошибка загрузки файла: Неподдерживаемый URL-адрес',
         });
 
-        throw new BadRequestException('Unsupported URL');
+        throw new BadRequestException(
+          'Ошибка загрузки файла: Неподдерживаемый URL-адрес',
+        );
       }
 
       return {
         downloadId: download.id,
-        message: 'Download was added to queue successfully',
+        message: MessageDownloadEnum.DOWNLOAD_ADDED_TO_QUEUE,
       };
     } catch (error) {
       this.logger.error(error);
-      throw new BadRequestException('Failed to process the file');
+      throw new InternalServerErrorException('Ошибка загрузки файла');
     }
   }
 
@@ -95,6 +108,7 @@ export class DownloadService {
       userId,
       source: DownloadSourceEnum.UPLOAD,
       title: payload.title,
+      message: MessageDownloadEnum.DOWNLOAD_ADDED_TO_QUEUE,
     });
 
     this.downloadQueue.add('upload_file', {
@@ -106,16 +120,26 @@ export class DownloadService {
     return download;
   }
 
-  async getDownload(where: { id: string; userId: string }) {
+  async getDownload(where: {
+    id: string;
+    userId: string;
+    status?: DownloadStatusEnum;
+  }) {
+    const wherePayload: FindOptionsWhere<Download> = {
+      id: where.id,
+      user: {
+        id: where.userId,
+      },
+    };
+
+    if (where.status) {
+      wherePayload.status = where.status;
+    }
+
     return this.entityService.findOne({
       repository: this.downloadRepository,
       cacheValue: where.id,
-      where: {
-        id: where.id,
-        user: {
-          id: where.userId,
-        },
-      },
+      where: wherePayload,
       select: {
         id: true,
         title: true,
@@ -127,6 +151,7 @@ export class DownloadService {
         updatedAt: true,
         error: true,
         ttlExpiresAt: true,
+        message: true,
       },
       transform: (dl) => ({
         id: dl.id,
@@ -139,6 +164,7 @@ export class DownloadService {
         updatedAt: dl.updatedAt,
         error: dl.error,
         ttlExpiresAt: dl.ttlExpiresAt,
+        message: dl.message,
       }),
     });
   }
@@ -148,6 +174,7 @@ export class DownloadService {
     url,
     userId,
     title,
+    message,
   }: DeepPartial<CreateDownloadDto>) {
     return this.entityService.save<Download>({
       repository: this.downloadRepository,
@@ -158,6 +185,7 @@ export class DownloadService {
           id: userId,
         },
         title,
+        message,
       },
       cacheValue: ({ id }) => id,
     });
@@ -198,6 +226,7 @@ export class DownloadService {
         createdAt: true,
         updatedAt: true,
         error: true,
+        message: true,
       },
       order: {
         createdAt: 'desc',

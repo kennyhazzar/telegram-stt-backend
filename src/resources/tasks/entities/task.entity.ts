@@ -1,24 +1,36 @@
 import { PrimaryUuidBaseEntity } from '@core/db';
 import { User } from '@resources/user/entities/user.entity';
-import { Entity, Column, ManyToOne } from 'typeorm';
+import { Entity, Column, ManyToOne, OneToOne, Index, JoinColumn } from 'typeorm';
+import { Download } from '@resources/download/entities';
+
+export enum TaskStatusEnum {
+  CREATED = 'created',
+  PROCESSING = 'processing',
+  DONE = 'done',
+  REJECTED = 'rejected',
+  ERROR = 'error',
+}
 
 @Entity('tasks')
+@Index(['status'])
+@Index(['message'])
 export class Task extends PrimaryUuidBaseEntity {
   @Column({
     type: 'enum',
-    enum: ['created', 'processing', 'done', 'rejected', 'error'],
-    default: 'created',
+    enum: TaskStatusEnum,
+    default: TaskStatusEnum.CREATED,
   })
-  status: 'created' | 'processing' | 'done' | 'rejected' | 'error';
+  status: TaskStatusEnum;
 
-  @Column({ type: 'varchar', length: 255 })
-  inputFileId: string;
+  @Column({ nullable: true })
+  totalCost: number;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  outputFileId: string;
+  @Column({ default: 'Задача создана' })
+  message: string;
 
-  @Column({ type: 'int', nullable: true })
-  duration: number;
+  @OneToOne(() => Download, { onDelete: 'CASCADE', nullable: true })
+  @JoinColumn()
+  download: Download;
 
   @ManyToOne(() => User, (user) => user.balance)
   user: User;

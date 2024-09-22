@@ -51,7 +51,10 @@ export class PaymentsService {
   async createTransaction(userId: string, value: number) {
     const idempotenceKey = randomUUID();
 
-    const { id: paymentId, user } = await this.createPaymentEntity(userId, value);
+    const { id: paymentId, user } = await this.createPaymentEntity(
+      userId,
+      value,
+    );
 
     const confirmationRedirect = `${this.botUrl}?start=payment_${paymentId}`;
     const description = `Платеж ${paymentId} на сумму ${value} рублей`;
@@ -107,13 +110,18 @@ export class PaymentsService {
     } catch (error) {
       this.logger.log(error);
 
-      await this.updatePaymentStatus(paymentId, PaymentStatusType.CANCELED, user.id, user.telegramId);
+      await this.updatePaymentStatus(
+        paymentId,
+        PaymentStatusType.CANCELED,
+        user.id,
+        user.telegramId,
+      );
 
       throw new InternalServerErrorException();
     }
   }
 
-  async createPaymentEntity(userId: string, amount: number) {
+  async createPaymentEntity(userId: string, amount: number, type = PaymentType.DEPOSIT) {
     const user = await this.usersService.getUser({
       userId,
       withBalance: true,
@@ -130,7 +138,7 @@ export class PaymentsService {
         balance: {
           id: user.balance.id,
         },
-        type: PaymentType.DEPOSIT,
+        type,
       },
       bypassCache: true,
     });
@@ -150,7 +158,13 @@ export class PaymentsService {
     };
   }
 
-  async updatePayment(paymentId: string, { description, confirmationRedirect }: { description: string; confirmationRedirect: string; }) {
+  async updatePayment(
+    paymentId: string,
+    {
+      description,
+      confirmationRedirect,
+    }: { description: string; confirmationRedirect: string },
+  ) {
     const payload = await this.paymentRepository.preload({
       id: paymentId,
       ...{
@@ -163,7 +177,7 @@ export class PaymentsService {
       repository: this.paymentRepository,
       payload,
       bypassCache: true,
-    })
+    });
   }
 
   async updatePaymentStatus(
@@ -271,14 +285,14 @@ export class PaymentsService {
       telegramCallback?: (bot: Telegraf<Context<Update>>) => Promise<void>;
     },
   ) {
-    await this.balanceService.updateUserBalance(
-      user.id,
-      +user.balance.amount + +payment.amount,
-    );
-
     const { success, telegramCallback } = options;
 
     if (success) {
+      await this.balanceService.updateUserBalance(
+        user.id,
+        +user.balance.amount + +payment.amount,
+      );
+
       await this.updatePaymentStatus(
         payment.id,
         PaymentStatusType.ADDED,

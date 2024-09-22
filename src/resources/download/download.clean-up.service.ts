@@ -7,7 +7,7 @@ import { DownloadService } from './download.service';
 import { EntityService } from '@core/services';
 import { Download, DownloadStatusEnum } from './entities';
 import { InjectRepository } from '@nestjs/typeorm';
-import { StorageConfigs } from '@core/types';
+import { MessageDownloadEnum, StorageConfigs } from '@core/types';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -35,7 +35,6 @@ export class DownloadCleanupService implements OnModuleInit {
     const now = new Date();
 
     const doneExpiration = subHours(now, 24);
-    const doneNotEnoughFundsExpiration = subHours(now, 6);
 
     const expiredDownloads = await this.entityService.findMany({
       repository: this.downloadRepository,
@@ -45,10 +44,6 @@ export class DownloadCleanupService implements OnModuleInit {
           status: DownloadStatusEnum.DONE,
           updatedAt: LessThan(doneExpiration),
         },
-        {
-          status: DownloadStatusEnum.DONE_NOT_ENOUTH_FUNDS,
-          updatedAt: LessThan(doneNotEnoughFundsExpiration),
-        },
       ],
       bypassCache: true,
     });
@@ -56,7 +51,8 @@ export class DownloadCleanupService implements OnModuleInit {
     for (const download of expiredDownloads) {
       try {
         if (download.filename) {
-          const { bucketName } = this.configService.get<StorageConfigs>('storage');
+          const { bucketName } =
+            this.configService.get<StorageConfigs>('storage');
 
           await this.minioService.client.removeObject(
             bucketName,
@@ -70,7 +66,7 @@ export class DownloadCleanupService implements OnModuleInit {
 
         await this.downloadService.updateDownload(download.id, {
           status: DownloadStatusEnum.EXPIRED,
-          error: 'Файл удален по истечению срока хранения',
+          message: MessageDownloadEnum.DOWNLOAD_EXPIRED,
         });
       } catch (error) {
         this.logger.error(`Error deleting file ${download.filename}:`, error);

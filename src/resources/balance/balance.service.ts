@@ -5,6 +5,7 @@ import { Balance } from './entities/balance.entity';
 import { EntityService } from '@core/services';
 import { UserService } from '../user/user.service';
 import { Payment } from '../payments/entities';
+import { TariffService } from '../tariff/tariff.service';
 
 @Injectable()
 export class BalanceService {
@@ -15,6 +16,7 @@ export class BalanceService {
     private readonly paymentsRepository: Repository<Payment>,
     private readonly usersService: UserService,
     private readonly entityService: EntityService,
+    private readonly tariffService: TariffService,
   ) {}
 
   async createBalance(userId: string) {
@@ -56,8 +58,40 @@ export class BalanceService {
         user,
         amount,
       },
+      affectCache: async (cm) => {
+        await Promise.allSettled([
+          cm.del(`user_${user.id}`),
+          cm.del(`user_${user.telegramId}`)
+        ]);
+      }
     });
 
     return balance;
+  }
+
+  async calculateCost(duration: number, userId: string) {
+    const { pricePerMinute } = await this.tariffService.getTariff();
+
+    const totalCost = Math.ceil(duration / 60) * pricePerMinute;
+
+    const user = await this.usersService.getUser({
+      userId,
+      withBalance: true,
+    });
+
+    if (totalCost > user.balance.amount) {
+      const error = `Не хватает ${totalCost - user.balance.amount} рублей для оплаты. Стоимость - ${totalCost} рублей\nБаланс - ${user.balance.amount}`;
+
+      return {
+        isPassed: false,
+        totalCost,
+        error,
+      };
+    } else {
+      return {
+        isPassed: true,
+        totalCost,
+      };
+    }
   }
 }
