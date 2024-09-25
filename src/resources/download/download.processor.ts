@@ -88,6 +88,7 @@ export class DownloadConsumer {
 
     const { mimeType, buffer, title } = await this.validateCloudFile(
       fileId,
+      downloadId,
       'google',
     );
 
@@ -117,7 +118,7 @@ export class DownloadConsumer {
     }
   }
 
-  async validateCloudFile(fileId: string, type: 'google' | 'yandex') {
+  async validateCloudFile(fileId: string, downloadId: string, type: 'google' | 'yandex') {
     try {
       let fileUrl: string = '';
 
@@ -136,12 +137,22 @@ export class DownloadConsumer {
         'video/x-msvideo',
       ];
       if (!validMimeTypes.includes(response?.mimeType)) {
+        await this.downloadService.updateDownload(downloadId, {
+          error: 'Invalid file type. Only video or audio files are allowed.',
+          status: DownloadStatusEnum.ERROR,
+        });
+
         throw new BadRequestException(
           'Invalid file type. Only video or audio files are allowed.',
         );
       }
 
       if (response?.size > this.MAX_FILE_SIZE) {
+        await this.downloadService.updateDownload(downloadId, {
+          error: 'File is too large. Maximum size allowed is 1GB.',
+          status: DownloadStatusEnum.ERROR,
+        });
+
         throw new BadRequestException(
           'File is too large. Maximum size allowed is 1GB.',
         );
@@ -155,12 +166,17 @@ export class DownloadConsumer {
       };
     } catch (error) {
       this.logger.error(error);
-      throw new BadRequestException('Failed to validate Google Drive file');
+      await this.downloadService.updateDownload(downloadId, {
+        error: 'Failed to validate file.',
+        status: DownloadStatusEnum.ERROR,
+      });
+      
+      throw new BadRequestException('Failed to validate file');
     }
   }
 
   //TODO: до лучших времен
-  // @Process('yandex_disk')
+  @Process('yandex_disk')
   async downloadFromYandexDisk(job: Job<JobDownload>) {
     try {
       const { downloadId, url, userId } = job.data;
@@ -171,13 +187,19 @@ export class DownloadConsumer {
       const downloadLink = linkResponse.data.href;
 
       if (!downloadLink) {
+        await this.downloadService.updateDownload(downloadId, {
+          error: 'Failed to download file from Yandex Disk',
+          status: DownloadStatusEnum.ERROR,
+        });
+
         throw new BadRequestException(
           'Failed to get download link from Yandex Disk',
         );
       }
 
       const { mimeType, buffer, title } = await this.validateCloudFile(
-        url,
+        downloadLink,
+        downloadId,
         'yandex',
       );
 
@@ -194,6 +216,7 @@ export class DownloadConsumer {
           mimeType,
           downloadId,
           userId,
+          downloadLink,
         );
       } catch (error) {
         this.logger.error(error);
@@ -271,11 +294,22 @@ export class DownloadConsumer {
     mimetype: string,
     downloadId: string,
     userId: string,
+    downloadLink?: string,
   ) {
     try {
       const { bucketName } = this.configService.get<StorageConfigs>('storage');
 
-      const duration = await getVideoDurationInSeconds(Readable.from(file));
+      let duration = 0;
+
+      try {
+        duration = await getVideoDurationInSeconds(Readable.from(file));
+      } catch (error) {
+        if (downloadLink) {
+          duration = await getVideoDurationInSeconds(downloadLink);
+        } else {
+          throw 'Error getting duration';
+        }
+      }
 
       const isPassedResult = await this.balanceService.calculateCost(
         duration,
@@ -320,16 +354,22 @@ export class DownloadConsumer {
   }
 
   private extractFilename(contentDisposition: string): string {
-    const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-    if (!filenameMatch || filenameMatch.length < 2) {
-      throw new Error('Filename not found in Content-Disposition header');
+    let filenameMatch = contentDisposition.match(/filename="(.+)"/);
+    
+    if (filenameMatch && filenameMatch.length > 1) {
+      const encodedFilename = filenameMatch[1];
+      const buffer = Buffer.from(encodedFilename, 'binary');
+      return buffer.toString('utf-8');
     }
-
-    const encodedFilename = filenameMatch[1];
-
-    const buffer = Buffer.from(encodedFilename, 'binary');
-    const decodedFilename = buffer.toString('utf-8');
-
-    return decodedFilename;
+  
+    filenameMatch = contentDisposition.match(/filename\*\=UTF-8''(.+)/);
+    
+    if (filenameMatch && filenameMatch.length > 1) {
+      const encodedFilename = filenameMatch[1];
+      const decodedFilename = decodeURIComponent(encodedFilename);
+      return decodedFilename;
+    }
+  
+    throw new Error('Filename not found in Content-Disposition header');
   }
 }

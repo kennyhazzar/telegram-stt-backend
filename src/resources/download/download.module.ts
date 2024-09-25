@@ -15,6 +15,7 @@ import { UserModule } from '@resources/user/user.module';
 import { TariffModule } from '../tariff/tariff.module';
 import { DownloadCleanupService } from './download.clean-up.service';
 import { BalanceModule } from '../balance/balance.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { BalanceModule } from '../balance/balance.module';
     MinioModule.registerAsync(MinioModuleConfig),
     JwtModule.registerAsync(JwtConfig),
     BalanceModule,
+    ScheduleModule.forRoot(),
   ],
   providers: [
     DownloadService,

@@ -48,7 +48,7 @@ export const FileMimeType = {
   'application/x-mif': 'mif',
   'video/quicktime': 'qt',
   'video/x-sgi-movie': 'movie',
-  'audio/mpeg': 'mpa',
+  'audio/mpeg': 'mp3',
   'video/mp4': 'mp4',
   'video/mpeg': 'mpg',
   'video/mpeg2': 'mpv2',
