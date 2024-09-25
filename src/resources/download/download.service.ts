@@ -55,17 +55,16 @@ export class DownloadService {
       } else if (url.includes('yadi.sk') || url.includes('disk.yandex.ru')) {
         download = await this.updateDownload(download.id, {
           source: DownloadSourceEnum.YANDEX_DISK,
-          status: DownloadStatusEnum.REJECTED,
-          message: 'Ошибка загрузки файла: Яндекс не поддерживается',
+          status: DownloadStatusEnum.PROCESSING,
+          message: MessageDownloadEnum.DOWNLOAD_PROCESSING,
           url,
         });
 
-        //TODO: до лучших времен
-        // await this.downloadQueue.add('yandex_disk', {
-        //   downloadId: download.id,
-        //   url,
-        //   userId,
-        // });
+        await this.downloadQueue.add('yandex_disk', {
+          downloadId: download.id,
+          url,
+          userId,
+        });
       } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
         download = await this.updateDownload(download.id, {
           source: DownloadSourceEnum.YOUTUBE,
