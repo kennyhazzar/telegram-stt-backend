@@ -1,6 +1,13 @@
 import { PrimaryUuidBaseEntity } from '@core/db';
 import { User } from '@resources/user/entities/user.entity';
-import { Entity, Column, ManyToOne, OneToOne, Index, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  ManyToOne,
+  OneToOne,
+  Index,
+  JoinColumn,
+} from 'typeorm';
 import { Download } from '@resources/download/entities';
 
 export enum TaskStatusEnum {

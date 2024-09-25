@@ -15,15 +15,16 @@ import { PaymentsModule } from '../payments/payments.module';
 import { JwtModule } from '@nestjs/jwt';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Task]),
-  CacheModule.registerAsync<RedisClientOptions>(CacheConfig),
-  JwtModule.registerAsync(JwtConfig),
-  UserModule,
-  TariffModule,
-  BalanceModule,
-  DownloadModule,
-  PaymentsModule,
-],
+  imports: [
+    TypeOrmModule.forFeature([Task]),
+    CacheModule.registerAsync<RedisClientOptions>(CacheConfig),
+    JwtModule.registerAsync(JwtConfig),
+    UserModule,
+    TariffModule,
+    BalanceModule,
+    DownloadModule,
+    PaymentsModule,
+  ],
   providers: [TaskService, EntityService],
   controllers: [TaskController],
   exports: [TaskService],

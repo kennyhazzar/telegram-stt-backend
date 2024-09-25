@@ -121,7 +121,11 @@ export class PaymentsService {
     }
   }
 
-  async createPaymentEntity(userId: string, amount: number, type = PaymentType.DEPOSIT) {
+  async createPaymentEntity(
+    userId: string,
+    amount: number,
+    type = PaymentType.DEPOSIT,
+  ) {
     const user = await this.usersService.getUser({
       userId,
       withBalance: true,

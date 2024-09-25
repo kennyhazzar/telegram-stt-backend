@@ -5,7 +5,7 @@ import { CacheConfig, JwtConfig, MinioModuleConfig } from '@core/configs';
 import { MinioModule } from 'nestjs-minio-client';
 import { BullModule } from '@nestjs/bull';
 import { DownloadConsumer } from './download.processor';
-import { EntityService } from '@core/services';
+import { EntityService, MediaService } from '@core/services';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Download } from './entities';
 import { RedisClientOptions } from 'redis';
@@ -32,6 +32,7 @@ import { ScheduleModule } from '@nestjs/schedule';
   providers: [
     DownloadService,
     EntityService,
+    MediaService,
     DownloadConsumer,
     DownloadCleanupService,
   ],
