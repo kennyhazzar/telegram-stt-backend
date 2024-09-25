@@ -61,9 +61,9 @@ export class BalanceService {
       affectCache: async (cm) => {
         await Promise.allSettled([
           cm.del(`user_${user.id}`),
-          cm.del(`user_${user.telegramId}`)
+          cm.del(`user_${user.telegramId}`),
         ]);
-      }
+      },
     });
 
     return balance;

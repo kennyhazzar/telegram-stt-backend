@@ -34,7 +34,7 @@ export class TaskService {
     const user = await this.usersService.getUser({
       userId,
       withBalance: true,
-    }); 
+    });
 
     const download = await this.downloadsService.getDownload({
       id: downloadId,
@@ -49,21 +49,35 @@ export class TaskService {
     const existTask = await this.getTask({ downloadId });
 
     if (existTask) {
-      throw new BadRequestException('Для этой загрузки уже была создана задача');
+      throw new BadRequestException(
+        'Для этой загрузки уже была создана задача',
+      );
     }
 
-    const cost = await this.balanceService.calculateCost(download.duration, userId);
+    const cost = await this.balanceService.calculateCost(
+      download.duration,
+      userId,
+    );
 
     if (!cost.isPassed) {
-      throw new BadRequestException(cost?.error || 'Непредвиденная ошибка расчета стоимости обработки');
+      throw new BadRequestException(
+        cost?.error || 'Непредвиденная ошибка расчета стоимости обработки',
+      );
     }
 
     const [, newBalance] = await Promise.allSettled([
-      this.paymentsService.createPaymentEntity(userId, cost.totalCost, PaymentType.WITHDRAWAL),
-      this.balanceService.updateUserBalance(userId, +user.balance.amount - cost.totalCost),
+      this.paymentsService.createPaymentEntity(
+        userId,
+        cost.totalCost,
+        PaymentType.WITHDRAWAL,
+      ),
+      this.balanceService.updateUserBalance(
+        userId,
+        +user.balance.amount - cost.totalCost,
+      ),
     ]);
 
-    let newBalanceAmount: number
+    let newBalanceAmount: number;
 
     if (newBalance.status === 'fulfilled') {
       newBalanceAmount = newBalance.value.amount;
@@ -112,7 +126,13 @@ export class TaskService {
     return this.taskRepository.save(task);
   }
 
-  async getTask({ taskId, downloadId }: { taskId?: string; downloadId?: string }): Promise<Task> {
+  async getTask({
+    taskId,
+    downloadId,
+  }: {
+    taskId?: string;
+    downloadId?: string;
+  }): Promise<Task> {
     const where: FindOptionsWhere<Task> = {};
 
     if (taskId) {
@@ -130,7 +150,7 @@ export class TaskService {
       relations: {
         download: true,
       },
-    })
+    });
 
     return task;
   }

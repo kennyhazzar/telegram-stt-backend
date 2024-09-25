@@ -21,5 +21,5 @@ export class UpdateDownloadDto {
   message?: string;
   task?: {
     id: string;
-  }
+  };
 }

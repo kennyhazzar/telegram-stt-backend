@@ -1,7 +1,12 @@
 import { Process, Processor } from '@nestjs/bull';
 import { ConfigService } from '@nestjs/config';
 import { MinioService } from 'nestjs-minio-client';
-import { FileMimeType, JobDownload, MessageDownloadEnum, StorageConfigs } from '@core/types';
+import {
+  FileMimeType,
+  JobDownload,
+  MessageDownloadEnum,
+  StorageConfigs,
+} from '@core/types';
 import getVideoDurationInSeconds from 'get-video-duration';
 import { Readable } from 'stream';
 import { randomUUID } from 'crypto';
@@ -15,6 +20,7 @@ import { Cache } from 'cache-manager';
 import { UpdateDownloadDto } from './dto';
 import { DeepPartial } from 'typeorm';
 import { BalanceService } from '@resources/balance/balance.service';
+import { MediaService } from '@core/services';
 
 @Processor('download_queue')
 export class DownloadConsumer {
@@ -26,6 +32,7 @@ export class DownloadConsumer {
     private readonly configService: ConfigService,
     private readonly downloadService: DownloadService,
     private readonly balanceService: BalanceService,
+    private readonly mediaService: MediaService,
     @Inject('CACHE_MANAGER') private readonly cacheManager: Cache,
   ) {}
 
@@ -118,7 +125,11 @@ export class DownloadConsumer {
     }
   }
 
-  async validateCloudFile(fileId: string, downloadId: string, type: 'google' | 'yandex') {
+  async validateCloudFile(
+    fileId: string,
+    downloadId: string,
+    type: 'google' | 'yandex',
+  ) {
     try {
       let fileUrl: string = '';
 
@@ -170,7 +181,7 @@ export class DownloadConsumer {
         error: 'Failed to validate file.',
         status: DownloadStatusEnum.ERROR,
       });
-      
+
       throw new BadRequestException('Failed to validate file');
     }
   }
@@ -303,8 +314,10 @@ export class DownloadConsumer {
       try {
         duration = await getVideoDurationInSeconds(Readable.from(file));
       } catch (error) {
+        this.logger.error({ error });
+
         if (downloadLink) {
-          duration = await getVideoDurationInSeconds(downloadLink);
+          duration = await this.mediaService.getMediaDuration(mimetype, file);
         } else {
           throw 'Error getting duration';
         }
@@ -354,21 +367,21 @@ export class DownloadConsumer {
 
   private extractFilename(contentDisposition: string): string {
     let filenameMatch = contentDisposition.match(/filename="(.+)"/);
-    
+
     if (filenameMatch && filenameMatch.length > 1) {
       const encodedFilename = filenameMatch[1];
       const buffer = Buffer.from(encodedFilename, 'binary');
       return buffer.toString('utf-8');
     }
-  
+
     filenameMatch = contentDisposition.match(/filename\*\=UTF-8''(.+)/);
-    
+
     if (filenameMatch && filenameMatch.length > 1) {
       const encodedFilename = filenameMatch[1];
       const decodedFilename = decodeURIComponent(encodedFilename);
       return decodedFilename;
     }
-  
+
     throw new Error('Filename not found in Content-Disposition header');
   }
 }
