@@ -3,21 +3,18 @@ import * as NodeID3 from 'node-id3';
 
 @Injectable()
 export class MediaService {
-  // Функция для чтения WAV файлов
   private getWavDuration(buffer: Buffer): number {
-    const chunkSize = buffer.readUInt32LE(4); // Размер файла
-    const subChunk2Size = buffer.readUInt32LE(40); // Размер аудио данных
-    const sampleRate = buffer.readUInt32LE(24); // Частота дискретизации
-    const bitsPerSample = buffer.readUInt16LE(34); // Бит на семпл
-    const numChannels = buffer.readUInt16LE(22); // Количество каналов
+    const chunkSize = buffer.readUInt32LE(4);
+    const subChunk2Size = buffer.readUInt32LE(40);
+    const sampleRate = buffer.readUInt32LE(24);
+    const bitsPerSample = buffer.readUInt16LE(34);
+    const numChannels = buffer.readUInt16LE(22);
 
-    // Длительность в секундах
     const durationInSeconds =
       subChunk2Size / ((sampleRate * numChannels * bitsPerSample) / 8);
     return durationInSeconds;
   }
 
-  // Функция для чтения MP4 файлов
   private readUInt32BE(buffer: Buffer, offset: number): number {
     return buffer.readUInt32BE(offset);
   }
@@ -51,13 +48,12 @@ export class MediaService {
     if (!mvhd) throw new Error('mvhd atom not found');
 
     const mvhdData = buffer.slice(mvhd.offset, mvhd.offset + mvhd.size);
-    const timeScale = this.readUInt32BE(mvhdData, 20); // Scale
-    const duration = this.readUInt32BE(mvhdData, 24); // Duration
+    const timeScale = this.readUInt32BE(mvhdData, 20);
+    const duration = this.readUInt32BE(mvhdData, 24);
 
-    return duration / timeScale; // Продолжительность в секундах
+    return duration / timeScale;
   }
 
-  // Функция для чтения MP3 файлов с использованием ID3 тегов
   private async getMp3Duration(buffer: Buffer): Promise<number> {
     const tags = NodeID3.read(buffer);
     if (tags && tags.length) {
@@ -67,16 +63,14 @@ export class MediaService {
     }
   }
 
-  // Функция для чтения AVI файлов
   private getAviDuration(buffer: Buffer): number {
-    const microSecPerFrame = buffer.readUInt32LE(32); // Длительность кадра в микросекундах
-    const totalFrames = buffer.readUInt32LE(48); // Общее количество кадров
+    const microSecPerFrame = buffer.readUInt32LE(32);
+    const totalFrames = buffer.readUInt32LE(48);
 
-    const durationInSeconds = (microSecPerFrame * totalFrames) / 1000000; // Перевод в секунды
+    const durationInSeconds = (microSecPerFrame * totalFrames) / 1000000;
     return durationInSeconds;
   }
 
-  // Главная функция для вызова правильного метода на основе MIME type
   async getMediaDuration(mimetype: string, buffer: Buffer): Promise<number> {
     switch (mimetype) {
       case 'audio/mpeg':
@@ -87,7 +81,7 @@ export class MediaService {
       case 'audio/wav':
       case 'audio/x-wav':
         return this.getWavDuration(buffer);
-      case 'video/x-msvideo': // MIME тип для AVI
+      case 'video/x-msvideo':
         return this.getAviDuration(buffer);
       default:
         throw new Error(`Unsupported mimetype: ${mimetype}`);

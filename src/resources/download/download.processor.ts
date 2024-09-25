@@ -181,7 +181,6 @@ export class DownloadConsumer {
         error: 'Failed to validate file.',
         status: DownloadStatusEnum.ERROR,
       });
-
       throw new BadRequestException('Failed to validate file');
     }
   }
@@ -367,7 +366,6 @@ export class DownloadConsumer {
 
   private extractFilename(contentDisposition: string): string {
     let filenameMatch = contentDisposition.match(/filename="(.+)"/);
-
     if (filenameMatch && filenameMatch.length > 1) {
       const encodedFilename = filenameMatch[1];
       const buffer = Buffer.from(encodedFilename, 'binary');
@@ -381,7 +379,6 @@ export class DownloadConsumer {
       const decodedFilename = decodeURIComponent(encodedFilename);
       return decodedFilename;
     }
-
     throw new Error('Filename not found in Content-Disposition header');
   }
 }
