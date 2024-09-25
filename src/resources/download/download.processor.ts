@@ -175,7 +175,6 @@ export class DownloadConsumer {
     }
   }
 
-  //TODO: до лучших времен
   @Process('yandex_disk')
   async downloadFromYandexDisk(job: Job<JobDownload>) {
     try {

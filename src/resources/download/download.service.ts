@@ -56,7 +56,6 @@ export class DownloadService {
         download = await this.updateDownload(download.id, {
           source: DownloadSourceEnum.YANDEX_DISK,
           status: DownloadStatusEnum.PROCESSING,
-          // message: 'Ошибка загрузки файла: Яндекс не поддерживается',
           message: MessageDownloadEnum.DOWNLOAD_PROCESSING,
           url,
         });
