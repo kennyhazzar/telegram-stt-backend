@@ -29,6 +29,10 @@ export class RequestLoggerMiddleware implements NestMiddleware {
         const endTime = Date.now();
         const duration = endTime - startTime;
 
+        this.logger.log(
+          `${log.method} ${log.url} ${res.statusCode} - ${log.userAgent} ${log.ip}`,
+        );
+
         setImmediate(async () => {
           await this.requestLogService.updateLog(log.id, {
             statusCode: res.statusCode,
