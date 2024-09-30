@@ -33,6 +33,8 @@ export class TaskController {
     if (!task) {
       throw new NotFoundException('Task not found');
     }
+
+    return task;
   }
 
   @Get('user/:userId')
