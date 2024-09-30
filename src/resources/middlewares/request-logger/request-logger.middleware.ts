@@ -30,7 +30,7 @@ export class RequestLoggerMiddleware implements NestMiddleware {
         const duration = endTime - startTime;
 
         this.logger.log(
-          `${log.method} ${log.url} ${res.statusCode} - ${log.userAgent} ${log.ip}`,
+          `${log.method} ${log.url} ${res.statusCode} - ${log.userAgent} ${log.ip} [${log.id}]`,
         );
 
         setImmediate(async () => {
