@@ -129,9 +129,11 @@ export class TaskService {
   async getTask({
     taskId,
     downloadId,
+    userId,
   }: {
     taskId?: string;
     downloadId?: string;
+    userId?: string;
   }): Promise<Task> {
     const where: FindOptionsWhere<Task> = {};
 
@@ -143,9 +145,26 @@ export class TaskService {
       where.download = { id: downloadId };
     }
 
+    if (userId) {
+      where.user = { id: userId };
+    }
+
     const task = await this.entityService.findOne({
       repository: this.taskRepository,
-      where: { id: taskId, download: { id: downloadId } },
+      where,
+      select: {
+        id: true,
+        status: true,
+        message: true,
+        totalCost: true,
+        updatedAt: true,
+        createdAt: true,
+        download: {
+          id: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
       bypassCache: true,
       relations: {
         download: true,

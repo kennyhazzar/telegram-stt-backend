@@ -27,8 +27,14 @@ export class TaskController {
 
   @Get(':taskId')
   @UseGuards(ThrottlerBehindProxyGuard, AuthGuard)
-  async getTaskById(@Param('taskId') taskId: string) {
-    const task = await this.taskService.getTask({ taskId });
+  async getTaskById(
+    @Req() request: UserRequestContext,
+    @Param('taskId') taskId: string,
+  ) {
+    const task = await this.taskService.getTask({
+      taskId,
+      userId: request.user.id,
+    });
 
     if (!task) {
       throw new NotFoundException('Task not found');
