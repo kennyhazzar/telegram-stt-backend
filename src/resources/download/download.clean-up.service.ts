@@ -61,9 +61,6 @@ export class DownloadCleanupService implements OnModuleInit {
           this.logger.warn(`Deleted file: ${download.filename}`);
         }
 
-        download.status = DownloadStatusEnum.EXPIRED;
-        await this.downloadRepository.save(download);
-
         await this.downloadService.updateDownload(download.id, {
           status: DownloadStatusEnum.EXPIRED,
           message: MessageDownloadEnum.DOWNLOAD_EXPIRED,
