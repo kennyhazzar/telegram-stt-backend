@@ -3,6 +3,7 @@ services:
     build: .
     ports:
       - ${PORT}:${PORT}
+    restart: always
     environment:
       - PORT=${PORT}
       - DB_TYPE=${DB_TYPE}
@@ -15,9 +16,9 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - REDIS_HOST=redis
       - REDIS_PORT=${REDIS_PORT}
-      - MINIO_DOMAIN=${MINIO_DOMAIN}
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - STORAGE_DOMAIN=${STORAGE_DOMAIN}
+      - STORAGE_ROOT_USER=${STORAGE_ROOT_USER}
+      - STORAGE_ROOT_PASSWORD=${STORAGE_ROOT_PASSWORD}
     depends_on:
       - db
       - redis
@@ -43,12 +44,12 @@ services:
    image: minio/minio:latest
    command: server --console-address ":9001" /data/
    ports:
-     - "9000:9000"
-     - "9001:9001"
+     - 9000:9000
+     - 9001:9001
    environment:
-     MINIO_DOMAIN: ${MINIO_DOMAIN}
-     MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-     MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+     MINIO_DOMAIN: ${STORAGE_DOMAIN}
+     MINIO_ROOT_USER: ${STORAGE_ROOT_USER}
+     MINIO_ROOT_PASSWORD: ${STORAGE_ROOT_PASSWORD}
    restart: always
    volumes:
      - ./storage:/data
